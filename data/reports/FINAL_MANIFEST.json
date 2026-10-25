@@ -1,0 +1,12 @@
+{
+  "package": "UrbanLens_FINAL_DATA_PACKAGE",
+  "version": "V1",
+  "created_at": "2026-09-24T07:37:33.350024+00:00",
+  "canonical_city_source": "worldcities.csv",
+  "canonical_city_mapping": "CITY_ID_MAPPING_V3",
+  "source_files_modified": false,
+  "country_id_rule": "country_<ISO2>",
+  "api_rule": "External provider IDs are namespaced by provider and never replace city_id.",
+  "missing_rule": "Semantic unavailable values are null; legitimate negative values are preserved.",
+  "historical_rule": "Observation/fetch time are retained; current API data does not overwrite history."
+}

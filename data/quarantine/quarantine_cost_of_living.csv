@@ -1,0 +1,175 @@
+source_city,parsed_country,country_iso2,reason
+"New York, NY, United States",United States,US,unmatched_city_country
+"San Francisco, CA, United States",United States,US,unmatched_city_country
+"Honolulu, HI, United States",United States,US,unmatched_city_country
+"Anchorage, AK, United States",United States,US,unmatched_city_country
+"Brooklyn, NY, United States",United States,US,unmatched_city_country
+"Washington, DC, United States",United States,US,unmatched_city_country
+"Santa Rosa, CA, United States",United States,US,unmatched_city_country
+"Charleston, SC, United States",United States,US,unmatched_city_country
+"Bellevue, WA, United States",United States,US,unmatched_city_country
+"Seattle, WA, United States",United States,US,unmatched_city_country
+"Berkeley, CA, United States",United States,US,unmatched_city_country
+"Jersey City, NJ, United States",United States,US,unmatched_city_country
+"Arhus, Denmark",Denmark,DK,unmatched_city_country
+"Oakland, CA, United States",United States,US,unmatched_city_country
+"Boston, MA, United States",United States,US,unmatched_city_country
+"Hartford, CT, United States",United States,US,unmatched_city_country
+"Albany, NY, United States",United States,US,unmatched_city_country
+"Philadelphia, PA, United States",United States,US,unmatched_city_country
+"Irvine, CA, United States",United States,US,unmatched_city_country
+"Long Beach, CA, United States",United States,US,unmatched_city_country
+"Los Angeles, CA, United States",United States,US,unmatched_city_country
+"Tel Aviv-Yafo, Israel",Israel,IL,unmatched_city_country
+"Chicago, IL, United States",United States,US,unmatched_city_country
+"Boulder, CO, United States",United States,US,unmatched_city_country
+"The Hague (Den Haag), Netherlands",Netherlands,NL,unmatched_city_country
+"San Jose, CA, United States",United States,US,unmatched_city_country
+"Burlington, VT, United States",United States,US,unmatched_city_country
+"Pittsburgh, PA, United States",United States,US,unmatched_city_country
+"Miami, FL, United States",United States,US,unmatched_city_country
+"Santa Barbara, CA, United States",United States,US,unmatched_city_country
+"Sacramento, CA, United States",United States,US,unmatched_city_country
+"Portland, ME, United States",United States,US,unmatched_city_country
+"West Palm Beach, FL, United States",United States,US,unmatched_city_country
+"Hong Kong, Hong Kong",Hong Kong,,unmatched_city_country
+"Leuven, Belgium",Belgium,BE,unmatched_city_country
+"Everett, WA, United States",United States,US,unmatched_city_country
+"Tacoma, WA, United States",United States,US,unmatched_city_country
+"Portland, OR, United States",United States,US,unmatched_city_country
+"St. John's, NL, Canada",Canada,CA,unmatched_city_country
+"Baltimore, MD, United States",United States,US,unmatched_city_country
+"New Orleans, LA, United States",United States,US,unmatched_city_country
+"Charlotte, NC, United States",United States,US,unmatched_city_country
+"Minneapolis, MN, United States",United States,US,unmatched_city_country
+"Eugene, OR, United States",United States,US,unmatched_city_country
+"San Diego, CA, United States",United States,US,unmatched_city_country
+"Bellingham, WA, United States",United States,US,unmatched_city_country
+"Atlanta, GA, United States",United States,US,unmatched_city_country
+"Denver, CO, United States",United States,US,unmatched_city_country
+"Saint Paul, MN, United States",United States,US,unmatched_city_country
+"Birmingham, AL, United States",United States,US,unmatched_city_country
+"Asheville, NC, United States",United States,US,unmatched_city_country
+"Fort Myers, FL, United States",United States,US,unmatched_city_country
+"Indianapolis, IN, United States",United States,US,unmatched_city_country
+"Jacksonville, FL, United States",United States,US,unmatched_city_country
+"Buffalo, NY, United States",United States,US,unmatched_city_country
+"Olympia, WA, United States",United States,US,unmatched_city_country
+"Saint Petersburg, FL, United States",United States,US,unmatched_city_country
+"Austin, TX, United States",United States,US,unmatched_city_country
+"Rochester, NY, United States",United States,US,unmatched_city_country
+"Orlando, FL, United States",United States,US,unmatched_city_country
+"Peoria, IL, United States",United States,US,unmatched_city_country
+"Cleveland, OH, United States",United States,US,unmatched_city_country
+"Raleigh, NC, United States",United States,US,unmatched_city_country
+"Arlington, TX, United States",United States,US,unmatched_city_country
+"Saint Louis, MO, United States",United States,US,unmatched_city_country
+"Milwaukee, WI, United States",United States,US,unmatched_city_country
+"Nashville, TN, United States",United States,US,unmatched_city_country
+"Tampa, FL, United States",United States,US,unmatched_city_country
+"Virginia Beach, VA, United States",United States,US,unmatched_city_country
+"Syracuse, NY, United States",United States,US,unmatched_city_country
+"Tallahassee, FL, United States",United States,US,unmatched_city_country
+"Bakersfield, CA, United States",United States,US,unmatched_city_country
+"Ann Arbor, MI, United States",United States,US,unmatched_city_country
+"Las Vegas, NV, United States",United States,US,unmatched_city_country
+"Columbus, OH, United States",United States,US,unmatched_city_country
+"Spokane, WA, United States",United States,US,unmatched_city_country
+"Memphis, TN, United States",United States,US,unmatched_city_country
+"Columbia, SC, United States",United States,US,unmatched_city_country
+"Salem, OR, United States",United States,US,unmatched_city_country
+"Fort Wayne, IN, United States",United States,US,unmatched_city_country
+"Dayton, OH, United States",United States,US,unmatched_city_country
+"Taipei, Taiwan",Taiwan,,unmatched_city_country
+"Kansas City, MO, United States",United States,US,unmatched_city_country
+"Nanaimo, BC, Canada",Canada,CA,unmatched_city_country
+"Fort Worth, TX, United States",United States,US,unmatched_city_country
+"Palma de Mallorca, Spain",Spain,ES,unmatched_city_country
+"Fayetteville, AR, United States",United States,US,unmatched_city_country
+"Hanover, Germany",Germany,DE,unmatched_city_country
+"Richmond, VA, United States",United States,US,unmatched_city_country
+"Greensboro, NC, United States",United States,US,unmatched_city_country
+"Dallas, TX, United States",United States,US,unmatched_city_country
+"Albuquerque, NM, United States",United States,US,unmatched_city_country
+"Phoenix, AZ, United States",United States,US,unmatched_city_country
+"Gainesville, FL, United States",United States,US,unmatched_city_country
+"Grand Rapids, MI, United States",United States,US,unmatched_city_country
+"Tucson, AZ, United States",United States,US,unmatched_city_country
+"Madison, WI, United States",United States,US,unmatched_city_country
+"Chattanooga, TN, United States",United States,US,unmatched_city_country
+"Fresno, CA, United States",United States,US,unmatched_city_country
+"Wichita, KS, United States",United States,US,unmatched_city_country
+"Salt Lake City, UT, United States",United States,US,unmatched_city_country
+"Detroit, MI, United States",United States,US,unmatched_city_country
+"Newcastle upon Tyne, United Kingdom",United Kingdom,GB,unmatched_city_country
+"Tulsa, OK, United States",United States,US,unmatched_city_country
+"Cincinnati, OH, United States",United States,US,unmatched_city_country
+"Lubbock, TX, United States",United States,US,unmatched_city_country
+"Taichung, Taiwan",Taiwan,,unmatched_city_country
+"Des Moines, IA, United States",United States,US,unmatched_city_country
+"Houston, TX, United States",United States,US,unmatched_city_country
+"Cardiff, United Kingdom",United Kingdom,GB,unmatched_city_country
+"Oklahoma City, OK, United States",United States,US,unmatched_city_country
+"Knoxville, TN, United States",United States,US,unmatched_city_country
+"Springfield, MO, United States",United States,US,unmatched_city_country
+"Vancouver, WA, United States",United States,US,unmatched_city_country
+"Toledo, OH, United States",United States,US,unmatched_city_country
+"Little Rock, AR, United States",United States,US,unmatched_city_country
+"Louisville, KY, United States",United States,US,unmatched_city_country
+"Reno, NV, United States",United States,US,unmatched_city_country
+"Huntsville, AL, United States",United States,US,unmatched_city_country
+"Lexington, KY, United States",United States,US,unmatched_city_country
+"Boise, ID, United States",United States,US,unmatched_city_country
+"El Paso, TX, United States",United States,US,unmatched_city_country
+"San Antonio, TX, United States",United States,US,unmatched_city_country
+"Zaragoza (Saragossa), Spain",Spain,ES,unmatched_city_country
+"Kaohsiung, Taiwan",Taiwan,,unmatched_city_country
+"Seville (Sevilla), Spain",Spain,ES,unmatched_city_country
+"Makati, Philippines",Philippines,PH,unmatched_city_country
+"Al Khobar, Saudi Arabia",Saudi Arabia,SA,unmatched_city_country
+"Jeddah (Jiddah), Saudi Arabia",Saudi Arabia,SA,unmatched_city_country
+"Santa Cruz de Tenerife, Spain",Spain,ES,unmatched_city_country
+"Bratislava, Slovakia",Slovakia,,unmatched_city_country
+"Prague, Czech Republic",Czech Republic,,unmatched_city_country
+"Las Palmas de Gran Canaria, Spain",Spain,ES,unmatched_city_country
+"Kosice, Slovakia",Slovakia,,unmatched_city_country
+"Brno, Czech Republic",Czech Republic,,unmatched_city_country
+"Moscow, Russia",Russia,,unmatched_city_country
+"Selangor, Malaysia",Malaysia,MY,unmatched_city_country
+"Penang, Malaysia",Malaysia,MY,unmatched_city_country
+"Pattaya, Thailand",Thailand,TH,unmatched_city_country
+"Irbil, Iraq",Iraq,IQ,unmatched_city_country
+"Bali, Indonesia",Indonesia,ID,unmatched_city_country
+"Olomouc, Czech Republic",Czech Republic,,unmatched_city_country
+"Ostrava, Czech Republic",Czech Republic,,unmatched_city_country
+"Krakow (Cracow), Poland",Poland,PL,unmatched_city_country
+"Port Elizabeth, South Africa",South Africa,ZA,unmatched_city_country
+"Saint Petersburg, Russia",Russia,,unmatched_city_country
+"Istanbul, Turkey",Turkey,,unmatched_city_country
+"Chelyabinsk, Russia",Russia,,unmatched_city_country
+"Cebu, Philippines",Philippines,PH,unmatched_city_country
+"Yekaterinburg, Russia",Russia,,unmatched_city_country
+"Samara, Russia",Russia,,unmatched_city_country
+"Kaliningrad, Russia",Russia,,unmatched_city_country
+"Ankara, Turkey",Turkey,,unmatched_city_country
+"Skopje, Macedonia",Macedonia,,unmatched_city_country
+"Nizhny Novgorod, Russia",Russia,,unmatched_city_country
+"Izmir, Turkey",Turkey,,unmatched_city_country
+"Antalya, Turkey",Turkey,,unmatched_city_country
+"Bursa, Turkey",Turkey,,unmatched_city_country
+"Kazan, Russia",Russia,,unmatched_city_country
+"Novosibirsk, Russia",Russia,,unmatched_city_country
+"Dumaguete, Philippines",Philippines,PH,unmatched_city_country
+"Rostov-na-donu, Russia",Russia,,unmatched_city_country
+"Krasnodar, Russia",Russia,,unmatched_city_country
+"Voronezh, Russia",Russia,,unmatched_city_country
+"Odessa, Ukraine",Ukraine,UA,unmatched_city_country
+"Kiev, Ukraine",Ukraine,UA,unmatched_city_country
+"Pristina, Kosovo (Disputed Territory)",Kosovo (Disputed Territory),,unmatched_city_country
+"Cairo, Egypt",Egypt,,unmatched_city_country
+"Lucknow (Lakhnau), India",India,IN,unmatched_city_country
+"Goa, India",India,IN,unmatched_city_country
+"Alexandria, Egypt",Egypt,,unmatched_city_country
+"Bhubaneswar, India",India,IN,unmatched_city_country
+"Visakhapatnam, India",India,IN,unmatched_city_country
+"Navi Mumbai, India",India,IN,unmatched_city_country

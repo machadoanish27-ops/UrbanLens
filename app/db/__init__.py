@@ -1,0 +1,1 @@
+"""Database integration boundary. No connection is opened at import time."""

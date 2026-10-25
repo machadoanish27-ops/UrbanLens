@@ -1,0 +1,13 @@
+source_id,source_file,source_type,timestamp,bytes,notes
+worldcities,worldcities.csv,dataset,2026-09-24T07:06:10.091725+00:00,4955466,master_cleaned
+cities15000,cities15000.csv,dataset,2026-09-24T07:06:10.667733+00:00,7522044,master_cleaned
+Countries,Countries.csv,dataset,2026-09-24T07:06:10.111726+00:00,1809381,master_cleaned
+gdp_2000_2025,gdp_2000_2025.csv,dataset,2026-09-24T07:06:10.097601+00:00,51619,master_cleaned
+Cost_of_living_index,Cost_of_living_index.csv,dataset,2026-09-24T07:06:10.238193+00:00,33550,master_cleaned
+wmo_full_weather_data,wmo_full_weather_data.csv,dataset,2026-09-24T07:06:10.231727+00:00,29619099,master_cleaned
+GlobalWeatherRepository,GlobalWeatherRepository.csv,dataset,2026-09-24T07:06:10.615732+00:00,49420969,master_cleaned
+WHO_air_quality_database_2018_v14_merged,WHO_air_quality_database_2018_v14_merged.csv,dataset,2026-09-24T07:06:10.127726+00:00,2436734,master_cleaned
+world-universities,world-universities.csv,dataset,2026-09-24T07:06:10.117647+00:00,554812,master_cleaned
+world_university_rankings_2026,world_university_rankings_2026.csv,dataset,2026-09-24T07:06:10.130825+00:00,18100,master_cleaned
+CITY_ID_MAPPING_V3,URBANLENS_CITY_IDENTITY_MAP_V3.csv,derived_identity_mapping,2026-09-24T07:37:06.643936+00:00,11134879,V3 frozen identity
+FINAL_DATA_BUILD_V1,UrbanLens_FINAL_DATA_PACKAGE,etl_build,2026-09-24T07:37:06.643968+00:00,0,one-shot consolidated static ETL

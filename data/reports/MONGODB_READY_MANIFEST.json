@@ -1,0 +1,10 @@
+{
+  "package": "UrbanLens MongoDB Ready Package V1",
+  "canonical_identity": "city_<worldcities.id>",
+  "source_package": "UrbanLens_FINAL_DATA_PACKAGE_V1",
+  "mongo_loader": "import_mongodb.py",
+  "mongo_validation": "mongo_init.js",
+  "data_directory": "data/",
+  "api_identity_collection": "city_provider_identities",
+  "source_files_modified": false
+}

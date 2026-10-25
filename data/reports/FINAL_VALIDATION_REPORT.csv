@@ -1,0 +1,11 @@
+check,actual,expected_or_input,passed_or_status,notes
+cities_count,50250,50250,True,Canonical city count
+city_id_unique,50250,50250,True,Canonical IDs
+geonames_unique_assigned,18700,18700,True,V3 external identity uniqueness
+city_lat_valid,50250,50250,True,Coordinate range
+city_lon_valid,50250,50250,True,Coordinate range
+cost_of_living_rows,2172,536,ETL subset,Unmatched rows quarantined
+weather_forecasts_wmo_rows,7945,15599,ETL subset,Unmatched rows quarantined
+weather_observations_rows,135406,167033,ETL subset,Unmatched rows quarantined
+air_quality_who_rows,8006,11962,ETL subset,Unmatched rows quarantined
+university_rankings_rows,342,342,ETL expanded,Six metrics per ranking row

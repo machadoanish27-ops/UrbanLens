@@ -1,0 +1,216 @@
+country_id,iso3,name,continent,iso2
+country_PG,PNG,Papua New Guinea,Oceania,PG
+country_AL,ALB,Albania,Europe,AL
+country_AO,AGO,Angola,Africa,AO
+country_DZ,DZA,Algeria,Africa,DZ
+country_DM,DMA,Dominica,North America,DM
+country_TN,TUN,Tunisia,Africa,TN
+country_DK,DNK,Denmark,Europe,DK
+country_EC,ECU,Ecuador,South America,EC
+country_PR,PRI,Puerto Rico,North America,PR
+country_DO,DOM,Dominican Republic,North America,DO
+country_TT,TTO,Trinidad and Tobago,North America,TT
+country_PK,PAK,Pakistan,Asia,PK
+country_AD,AND,Andorra,Europe,AD
+country_AE,ARE,United Arab Emirates,Asia,AE
+country_PSE,PSE,West Bank and Gaza,Asia,
+country_LR,LBR,Liberia,Africa,LR
+country_RS,SRB,Serbia,Europe,RS
+country_LY,LBY,Libya,Africa,LY
+country_KI,KIR,Kiribati,Oceania,KI
+country_UZ,UZB,Uzbekistan,Asia,UZ
+country_BB,BRB,Barbados,North America,BB
+country_BN,BRN,Brunei Darussalam,Asia,BN
+country_ST,STP,Sao Tome and Principe,Africa,ST
+country_KN,KNA,St. Kitts and Nevis,North America,KN
+country_KR,KOR,"Korea, Rep.",Asia,KR
+country_SS,SSD,South Sudan,Africa,SS
+country_BT,BTN,Bhutan,Asia,BT
+country_BW,BWA,Botswana,Africa,BW
+country_CF,CAF,Central African Republic,Africa,CF
+country_KZ,KAZ,Kazakhstan,Asia,KZ
+country_SR,SUR,Suriname,South America,SR
+country_LI,LIE,Liechtenstein,Europe,LI
+country_LK,LKA,Sri Lanka,Asia,LK
+country_SM,SMR,San Marino,Europe,SM
+country_LS,LSO,Lesotho,Africa,LS
+country_KW,KWT,Kuwait,Asia,KW
+country_VC,VCT,St. Vincent and the Grenadines,North America,VC
+country_BR,BRA,Brazil,South America,BR
+country_LA,LAO,Lao PDR,Asia,LA
+country_LB,LBN,Lebanon,Asia,LB
+country_KE,KEN,Kenya,Africa,KE
+country_KG,KGZ,Kyrgyz Republic,Asia,KG
+country_KH,KHM,Cambodia,Asia,KH
+country_IL,ISR,Israel,Asia,IL
+country_IT,ITA,Italy,Europe,IT
+country_US,USA,United States,North America,US
+country_CA,CAN,Canada,North America,CA
+country_JM,JAM,Jamaica,North America,JM
+country_LU,LUX,Luxembourg,Europe,LU
+country_SV,SLV,El Salvador,North America,SV
+country_LV,LVA,Latvia,Europe,LV
+country_BM,BMU,Bermuda,North America,BM
+country_BO,BOL,Bolivia,South America,BO
+country_LC,LCA,St. Lucia,North America,LC
+country_SO,SOM,Somalia,Africa,SO
+country_JO,JOR,Jordan,Asia,JO
+country_SK,SVK,Slovak Republic,Europe,SK
+country_JP,JPN,Japan,Asia,JP
+country_IR,IRN,"Iran, Islamic Rep.",Asia,IR
+country_CH,CHE,Switzerland,Europe,CH
+country_UY,URY,Uruguay,South America,UY
+country_CL,CHL,Chile,South America,CL
+country_SE,SWE,Sweden,Europe,SE
+country_MA,MAR,Morocco,Africa,MA
+country_MC,MCO,Monaco,Europe,MC
+country_MD,MDA,Moldova,Europe,MD
+country_LT,LTU,Lithuania,Europe,LT
+country_BA,BIH,Bosnia and Herzegovina,Europe,BA
+country_VE,VEN,"Venezuela, RB",South America,VE
+country_BY,BLR,Belarus,Europe,BY
+country_BZ,BLZ,Belize,North America,BZ
+country_IQ,IRQ,Iraq,Asia,IQ
+country_IS,ISL,Iceland,Europe,IS
+country_SI,SVN,Slovenia,Europe,SI
+country_CN,CHN,China,Asia,CN
+country_CI,CIV,Cote d'Ivoire,Africa,CI
+country_CM,CMR,Cameroon,Africa,CM
+country_ID,IDN,Indonesia,Asia,ID
+country_IM,IMN,Isle of Man,Europe,IM
+country_MV,MDV,Maldives,Asia,MV
+country_MX,MEX,Mexico,North America,MX
+country_SG,SGP,Singapore,Asia,SG
+country_MO,MAC,"Macao SAR, China",Asia,MO
+country_VG,VGB,British Virgin Islands,North America,VG
+country_BS,BHS,"Bahamas, The",North America,BS
+country_MF,MAF,St. Martin (French part),North America,MF
+country_SL,SLE,Sierra Leone,Africa,SL
+country_IN,IND,India,Asia,IN
+country_SZ,SWZ,Eswatini,Africa,SZ
+country_IE,IRL,Ireland,Europe,IE
+country_HN,HND,Honduras,North America,HN
+country_UA,UKR,Ukraine,Europe,UA
+country_CD,COD,"Congo, Dem. Rep.",Africa,CD
+country_HR,HRV,Croatia,Europe,HR
+country_SC,SYC,Seychelles,Africa,SC
+country_ML,MLI,Mali,Africa,ML
+country_MT,MLT,Malta,Europe,MT
+country_SN,SEN,Senegal,Africa,SN
+country_VI,VIR,Virgin Islands (U.S.),North America,VI
+country_BG,BGR,Bulgaria,Europe,BG
+country_BH,BHR,Bahrain,Asia,BH
+country_MG,MDG,Madagascar,Africa,MG
+country_SB,SLB,Solomon Islands,Oceania,SB
+country_HT,HTI,Haiti,North America,HT
+country_SX,SXM,Sint Maarten (Dutch part),North America,SX
+country_HU,HUN,Hungary,Europe,HU
+country_GT,GTM,Guatemala,North America,GT
+country_CG,COG,"Congo, Rep.",Africa,CG
+country_UG,UGA,Uganda,Africa,UG
+country_CO,COL,Colombia,South America,CO
+country_SY,SYR,Syrian Arab Republic,Asia,SY
+country_ME,MNE,Montenegro,Europe,ME
+country_MN,MNG,Mongolia,Asia,MN
+country_MP,MNP,Northern Mariana Islands,Oceania,MP
+country_MH,MHL,Marshall Islands,Oceania,MH
+country_BJ,BEN,Benin,Africa,BJ
+country_BF,BFA,Burkina Faso,Africa,BF
+country_BD,BGD,Bangladesh,Asia,BD
+country_MK,MKD,North Macedonia,Europe,MK
+country_GU,GUM,Guam,Oceania,GU
+country_GY,GUY,Guyana,South America,GY
+country_HK,HKG,"Hong Kong SAR, China",Asia,HK
+country_GQ,GNQ,Equatorial Guinea,Africa,GQ
+country_KM,COM,Comoros,Africa,KM
+country_CV,CPV,Cabo Verde,Africa,CV
+country_CR,CRI,Costa Rica,North America,CR
+country_GR,GRC,Greece,Europe,GR
+country_MU,MUS,Mauritius,Africa,MU
+country_MW,MWI,Malawi,Africa,MW
+country_RW,RWA,Rwanda,Africa,RW
+country_MM,MMR,Myanmar,Asia,MM
+country_VN,VNM,Vietnam,Asia,VN
+country_BI,BDI,Burundi,Africa,BI
+country_BE,BEL,Belgium,Europe,BE
+country_SD,SDN,Sudan,Africa,SD
+country_GD,GRD,Grenada,North America,GD
+country_TC,TCA,Turks and Caicos Islands,North America,TC
+country_GL,GRL,Greenland,North America,GL
+country_GI,GIB,Gibraltar,Europe,GI
+country_TZ,TZA,Tanzania,Africa,TZ
+country_CU,CUB,Cuba,North America,CU
+country_GN,GIN,Guinea,Africa,GN
+country_TG,TGO,Togo,Africa,TG
+country_NC,NCL,New Caledonia,Oceania,NC
+country_NE,NER,Niger,Africa,NE
+country_NG,NGA,Nigeria,Africa,NG
+country_MZ,MOZ,Mozambique,Africa,MZ
+country_AZ,AZE,Azerbaijan,Asia,AZ
+country_VU,VUT,Vanuatu,Oceania,VU
+country_MR,MRT,Mauritania,Africa,MR
+country_SA,SAU,Saudi Arabia,Asia,SA
+country_GM,GMB,"Gambia, The",Africa,GM
+country_TD,TCD,Chad,Africa,TD
+country_GW,GNB,Guinea-Bissau,Africa,GW
+country_GA,GAB,Gabon,Africa,GA
+country_TH,THA,Thailand,Asia,TH
+country_TV,TUV,Tuvalu,Oceania,TV
+country_CW,CUW,Curacao,North America,CW
+country_KY,CYM,Cayman Islands,North America,KY
+country_GB,GBR,United Kingdom,Europe,GB
+country_NL,NLD,Netherlands,Europe,NL
+country_QA,QAT,Qatar,Asia,QA
+country_NO,NOR,Norway,Europe,NO
+country_MY,MYS,Malaysia,Asia,MY
+country_AU,AUS,Australia,Oceania,AU
+country_AT,AUT,Austria,Europe,AT
+country_RU,RUS,Russian Federation,Asia,RU
+country_NOT PROVIDED,NAM,Namibia,Africa,NOT PROVIDED
+country_GE,GEO,Georgia,Asia,GE
+country_GH,GHA,Ghana,Africa,GH
+country_CY,CYP,Cyprus,Asia,CY
+country_TR,TUR,Turkiye,Asia,TR
+country_CZ,CZE,Czechia,Europe,CZ
+country_FR,FRA,France,Europe,FR
+country_TM,TKM,Turkmenistan,Asia,TM
+country_NZ,NZL,New Zealand,Oceania,NZ
+country_PF,PYF,French Polynesia,Oceania,PF
+country_OM,OMN,Oman,Asia,OM
+country_WS,WSM,Samoa,Oceania,WS
+country_AS,ASM,American Samoa,Oceania,AS
+country_AG,ATG,Antigua and Barbuda,North America,AG
+country_NI,NIC,Nicaragua,North America,NI
+country_RO,ROU,Romania,Europe,RO
+country_FO,FRO,Faroe Islands,Europe,FO
+country_FM,FSM,"Micronesia, Fed. Sts.",Oceania,FM
+country_TJ,TJK,Tajikistan,Asia,TJ
+country_ES,ESP,Spain,Europe,ES
+country_DE,DEU,Germany,Europe,DE
+country_DJ,DJI,Djibouti,Africa,DJ
+country_TL,TLS,Timor-Leste,Asia,TL
+country_EE,EST,Estonia,Europe,EE
+country_EG,EGY,"Egypt, Arab Rep.",Africa,EG
+country_ER,ERI,Eritrea,Africa,ER
+country_TO,TON,Tonga,Oceania,TO
+country_NP,NPL,Nepal,Asia,NP
+country_AR,ARG,Argentina,South America,AR
+country_YE,YEM,"Yemen, Rep.",Asia,YE
+country_AM,ARM,Armenia,Asia,AM
+country_NR,NRU,Nauru,Oceania,NR
+country_ET,ETH,Ethiopia,Africa,ET
+country_FI,FIN,Finland,Europe,FI
+country_FJ,FJI,Fiji,Oceania,FJ
+country_ZA,ZAF,South Africa,Africa,ZA
+country_AW,ABW,Aruba,North America,AW
+country_ZM,ZMB,Zambia,Africa,ZM
+country_AF,AFG,Afghanistan,Asia,AF
+country_PT,PRT,Portugal,Europe,PT
+country_PY,PRY,Paraguay,South America,PY
+country_PA,PAN,Panama,North America,PA
+country_PL,POL,Poland,Europe,PL
+country_KP,PRK,"Korea, Dem. People's Rep.",Asia,KP
+country_PE,PER,Peru,South America,PE
+country_ZW,ZWE,Zimbabwe,Africa,ZW
+country_PH,PHL,Philippines,Asia,PH
+country_PW,PLW,Palau,Oceania,PW

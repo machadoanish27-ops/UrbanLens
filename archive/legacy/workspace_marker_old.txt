@@ -1,0 +1,2 @@
+UrbanLens final single-workspace marker.
+Use this folder as the canonical VS Code project root.

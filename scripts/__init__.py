@@ -1,0 +1,1 @@
+"""Local validation and operational entry points."""
