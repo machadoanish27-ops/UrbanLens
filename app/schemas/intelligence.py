@@ -3,6 +3,8 @@
 from typing import Any
 from pydantic import BaseModel, Field
 
+from app.schemas.knowledge import KnowledgeEvidenceSchema
+
 
 class AgentCatalogItem(BaseModel):
     """Metadata regarding a domain agent's scope and state."""
@@ -32,6 +34,7 @@ class AgentResultSchema(BaseModel):
     status: str
     data: dict[str, Any] = Field(default_factory=dict)
     sources: list[SourceProvenanceSchema] = Field(default_factory=list)
+    knowledge_evidence: list[KnowledgeEvidenceSchema] = Field(default_factory=list)
     missing_data: list[str] = Field(default_factory=list)
     unavailable_fields: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
@@ -78,6 +81,7 @@ class IntelligenceQueryResponse(BaseModel):
     selected_agents: list[str] = Field(default_factory=list)
     results: list[AgentResultSchema] = Field(default_factory=list)
     signals: list[dict[str, Any]] = Field(default_factory=list)
+    knowledge_evidence: list[KnowledgeEvidenceSchema] = Field(default_factory=list)
     summary: str | None = None
     warnings: list[str] = Field(default_factory=list)
     sources: list[SourceProvenanceSchema] = Field(default_factory=list)

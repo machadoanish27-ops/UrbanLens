@@ -159,6 +159,36 @@ INDEX_DEFINITIONS: list[dict[str, Any]] = [
         "keys": [("source_id", 1)],
         "options": {"unique": True, "partialFilterExpression": {"source_id": {"$type": "string", "$gt": ""}}},
     },
+    {
+        "collection": "knowledge_documents",
+        "keys": [("document_id", 1)],
+        "options": {"unique": True, "partialFilterExpression": {"document_id": {"$type": "string", "$gt": ""}}},
+    },
+    {
+        "collection": "knowledge_documents",
+        "keys": [("checksum", 1)],
+        "options": {"unique": True, "partialFilterExpression": {"checksum": {"$type": "string", "$gt": ""}}},
+    },
+    {
+        "collection": "knowledge_documents",
+        "keys": [("city_id", 1), ("category", 1)],
+        "options": {},
+    },
+    {
+        "collection": "knowledge_chunks",
+        "keys": [("chunk_id", 1)],
+        "options": {"unique": True, "partialFilterExpression": {"chunk_id": {"$type": "string", "$gt": ""}}},
+    },
+    {
+        "collection": "knowledge_chunks",
+        "keys": [("document_id", 1), ("chunk_index", 1)],
+        "options": {},
+    },
+    {
+        "collection": "knowledge_chunks",
+        "keys": [("city_id", 1), ("category", 1)],
+        "options": {},
+    },
 ]
 
 

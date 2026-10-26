@@ -44,6 +44,25 @@ class IntelligenceService:
                 "missing_data": list(r.missing_data),
                 "unavailable_fields": list(r.unavailable_fields),
                 "warnings": list(r.warnings),
+                "knowledge_evidence": [
+                    {
+                        "evidence_id": ev.evidence_id,
+                        "document_id": ev.document_id,
+                        "chunk_id": ev.chunk_id,
+                        "title": ev.title,
+                        "source": ev.source,
+                        "source_url": ev.source_url,
+                        "publisher": ev.publisher,
+                        "text": ev.text,
+                        "category": ev.category,
+                        "city_id": ev.city_id,
+                        "country_id": ev.country_id,
+                        "retrieved_at": ev.retrieved_at,
+                        "retrieval_score": ev.retrieval_score,
+                        "metadata": dict(ev.metadata),
+                    }
+                    for ev in getattr(r, "knowledge_evidence", ())
+                ],
                 "detail": r.detail,
                 "summary": r.summary,
                 "confidence": r.confidence,
@@ -63,6 +82,26 @@ class IntelligenceService:
             for s in aggregated.sources
         ]
 
+        aggregated_evidence = [
+            {
+                "evidence_id": ev.evidence_id,
+                "document_id": ev.document_id,
+                "chunk_id": ev.chunk_id,
+                "title": ev.title,
+                "source": ev.source,
+                "source_url": ev.source_url,
+                "publisher": ev.publisher,
+                "text": ev.text,
+                "category": ev.category,
+                "city_id": ev.city_id,
+                "country_id": ev.country_id,
+                "retrieved_at": ev.retrieved_at,
+                "retrieval_score": ev.retrieval_score,
+                "metadata": dict(ev.metadata),
+            }
+            for ev in getattr(aggregated, "knowledge_evidence", ())
+        ]
+
         return {
             "city_id": aggregated.city_id,
             "query": aggregated.query,
@@ -71,6 +110,7 @@ class IntelligenceService:
             "selected_agents": list(aggregated.selected_agents),
             "results": results_data,
             "signals": list(aggregated.signals),
+            "knowledge_evidence": aggregated_evidence,
             "summary": aggregated.summary,
             "warnings": list(aggregated.warnings),
             "sources": sources_data,

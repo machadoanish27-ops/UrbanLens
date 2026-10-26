@@ -24,8 +24,9 @@ class LocationAgent(BaseAgent):
         city_service: CityService | None = None,
         geocoding_service: GeocodingService | None = None,
         places_service: PlacesService | None = None,
+        knowledge_service: Any = None,
     ) -> None:
-        super().__init__(database)
+        super().__init__(database, knowledge_service=knowledge_service)
         self.city_service = city_service or (CityService(database) if database is not None else None)
         self.geocoding_service = geocoding_service or (GeocodingService(database) if database is not None else None)
         self.places_service = places_service or (PlacesService(database) if database is not None else None)
@@ -72,14 +73,31 @@ class LocationAgent(BaseAgent):
         aliases = city.get("aliases", [])
         identities = city.get("provider_identities", [])
 
-        sources = (
+        sources_list: list[SourceProvenance] = [
             SourceProvenance(
                 source_id=city.get("source_id", "worldcities"),
                 provider="canonical_city_registry",
                 source_version=city.get("mapping_version", "1.0"),
                 confidence=1.0,
             ),
+        ]
+
+        # Retrieve grounded knowledge evidence
+        ke_list = await self.retrieve_knowledge_evidence(
+            query=request.query,
+            city_id=canonical_id,
+            categories=["city_information", "relocation", "culture"],
+            top_k=2,
         )
+        for ev in ke_list:
+            sources_list.append(
+                SourceProvenance(
+                    source_id=ev.source,
+                    provider="knowledge",
+                    retrieved_at=ev.retrieved_at,
+                    confidence=ev.retrieval_score or 1.0,
+                )
+            )
 
         pop = city.get("population")
         pop_str = f"{pop:,}" if isinstance(pop, (int, float)) else "N/A"
@@ -111,7 +129,8 @@ class LocationAgent(BaseAgent):
                     if isinstance(i, dict)
                 ],
             },
-            sources=sources,
+            sources=tuple(sources_list),
+            knowledge_evidence=tuple(ke_list),
             missing_data=(),
             unavailable_fields=(),
             detail="Canonical location and administrative identity successfully verified.",

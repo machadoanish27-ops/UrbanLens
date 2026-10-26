@@ -7,13 +7,26 @@ from typing import Any
 from pymongo.database import Database
 
 from app.models.agent import AgentRequest, AgentResult, AgentStatus, SourceProvenance
+from app.models.knowledge import KnowledgeEvidence
 
 
 class BaseAgent(ABC):
     """Abstract base class for all domain-specific intelligence agents."""
 
-    def __init__(self, database: Database | None = None) -> None:
+    def __init__(
+        self,
+        database: Database | None = None,
+        knowledge_service: Any = None,
+    ) -> None:
         self.database = database
+        self.knowledge_service = knowledge_service
+        if self.knowledge_service is None and database is not None:
+            try:
+                from app.db.repositories.knowledge import KnowledgeRepository
+                from app.services.knowledge import KnowledgeService
+                self.knowledge_service = KnowledgeService(KnowledgeRepository(database))
+            except Exception:
+                self.knowledge_service = None
 
     @property
     @abstractmethod
@@ -62,6 +75,7 @@ class BaseAgent(ABC):
             status=AgentStatus.UNAVAILABLE,
             data={},
             sources=(),
+            knowledge_evidence=(),
             missing_data=missing_data,
             unavailable_fields=missing_data,
             detail=detail,
@@ -69,4 +83,27 @@ class BaseAgent(ABC):
             warnings=warnings,
             confidence=confidence,
         )
+
+    async def retrieve_knowledge_evidence(
+        self,
+        query: str | None,
+        city_id: str | None,
+        categories: list[str],
+        top_k: int = 2,
+        min_score: float = 0.1,
+    ) -> list[KnowledgeEvidence]:
+        """Query knowledge service if configured and query provided."""
+        if not getattr(self, "knowledge_service", None) or not query:
+            return []
+        try:
+            return await self.knowledge_service.search_knowledge(
+                query=query,
+                city_id=city_id,
+                categories=categories,
+                top_k=top_k,
+                min_score=min_score,
+            )
+        except Exception:
+            return []
+
 

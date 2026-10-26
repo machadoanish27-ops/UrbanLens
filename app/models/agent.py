@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Mapping
+from typing import Any, Mapping
+from app.models.knowledge import KnowledgeEvidence
 
 
 class AgentStatus(StrEnum):
@@ -35,6 +36,7 @@ class AgentResult:
     status: AgentStatus
     data: Mapping[str, object] = field(default_factory=dict)
     sources: tuple[SourceProvenance, ...] = ()
+    knowledge_evidence: tuple[KnowledgeEvidence, ...] = ()
     missing_data: tuple[str, ...] = ()
     detail: str | None = None
     summary: str | None = None

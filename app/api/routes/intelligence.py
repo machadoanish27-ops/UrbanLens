@@ -12,6 +12,7 @@ from app.schemas.intelligence import (
     IntelligenceQueryResponse,
     SourceProvenanceSchema,
 )
+from app.schemas.knowledge import KnowledgeEvidenceSchema
 from app.services.intelligence import IntelligenceService
 
 router = APIRouter(tags=["Intelligence & Agents"])
@@ -54,12 +55,14 @@ async def query_intelligence(
     results_objs = []
     for r in raw.get("results", []):
         sources = [SourceProvenanceSchema(**s) for s in r.get("sources", [])]
+        ke_list = [KnowledgeEvidenceSchema(**e) for e in r.get("knowledge_evidence", [])]
         results_objs.append(
             AgentResultSchema(
                 agent_id=r["agent_id"],
                 status=r["status"],
                 data=r.get("data", {}),
                 sources=sources,
+                knowledge_evidence=ke_list,
                 missing_data=r.get("missing_data", []),
                 unavailable_fields=r.get("unavailable_fields", []),
                 warnings=r.get("warnings", []),
@@ -72,6 +75,7 @@ async def query_intelligence(
         )
 
     all_sources_objs = [SourceProvenanceSchema(**s) for s in raw.get("sources", [])]
+    evidence_objs = [KnowledgeEvidenceSchema(**e) for e in raw.get("knowledge_evidence", [])]
 
     return ApiResponse(
         data=IntelligenceQueryResponse(
@@ -82,6 +86,7 @@ async def query_intelligence(
             selected_agents=raw.get("selected_agents", []),
             results=results_objs,
             signals=raw.get("signals", []),
+            knowledge_evidence=evidence_objs,
             summary=raw.get("summary"),
             warnings=raw.get("warnings", []),
             sources=all_sources_objs,
@@ -107,12 +112,14 @@ async def get_city_intelligence(
     results_objs = []
     for r in raw.get("results", []):
         sources = [SourceProvenanceSchema(**s) for s in r.get("sources", [])]
+        ke_list = [KnowledgeEvidenceSchema(**e) for e in r.get("knowledge_evidence", [])]
         results_objs.append(
             AgentResultSchema(
                 agent_id=r["agent_id"],
                 status=r["status"],
                 data=r.get("data", {}),
                 sources=sources,
+                knowledge_evidence=ke_list,
                 missing_data=r.get("missing_data", []),
                 unavailable_fields=r.get("unavailable_fields", []),
                 warnings=r.get("warnings", []),
@@ -125,6 +132,7 @@ async def get_city_intelligence(
         )
 
     all_sources_objs = [SourceProvenanceSchema(**s) for s in raw.get("sources", [])]
+    evidence_objs = [KnowledgeEvidenceSchema(**e) for e in raw.get("knowledge_evidence", [])]
 
     return ApiResponse(
         data=IntelligenceQueryResponse(
@@ -135,6 +143,7 @@ async def get_city_intelligence(
             selected_agents=raw.get("selected_agents", []),
             results=results_objs,
             signals=raw.get("signals", []),
+            knowledge_evidence=evidence_objs,
             summary=raw.get("summary"),
             warnings=raw.get("warnings", []),
             sources=all_sources_objs,

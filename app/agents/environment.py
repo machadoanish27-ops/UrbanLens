@@ -22,8 +22,9 @@ class EnvironmentAgent(BaseAgent):
         database: Database | None = None,
         weather_service: WeatherService | None = None,
         air_quality_service: AirQualityService | None = None,
+        knowledge_service: Any = None,
     ) -> None:
-        super().__init__(database)
+        super().__init__(database, knowledge_service=knowledge_service)
         self.weather_service = weather_service or (WeatherService(database) if database is not None else None)
         self.air_quality_service = air_quality_service or (AirQualityService(database) if database is not None else None)
 
@@ -220,6 +221,23 @@ class EnvironmentAgent(BaseAgent):
             f"Weather: {temp_str} via {w_prov}. Air Quality: PM2.5 {pm_str} via {aq_prov}."
         )
 
+        # Retrieve grounded knowledge evidence
+        ke_list = await self.retrieve_knowledge_evidence(
+            query=request.query,
+            city_id=request.city_id,
+            categories=["environment"],
+            top_k=2,
+        )
+        for ev in ke_list:
+            sources.append(
+                SourceProvenance(
+                    source_id=ev.source,
+                    provider="knowledge",
+                    retrieved_at=ev.retrieved_at,
+                    confidence=ev.retrieval_score or 1.0,
+                )
+            )
+
         return AgentResult(
             agent_id=self.agent_id,
             status=status,
@@ -235,6 +253,7 @@ class EnvironmentAgent(BaseAgent):
                 "air_quality_who_annual": canonical_who or (a_data.get("who_annual") if isinstance(a_data, dict) else None),
             },
             sources=tuple(sources),
+            knowledge_evidence=tuple(ke_list),
             missing_data=tuple(unavailable_fields),
             unavailable_fields=tuple(unavailable_fields),
             warnings=tuple(warnings),

@@ -16,9 +16,12 @@ from app.agents.location import LocationAgent
 from app.agents.mobility import MobilityAgent
 from app.agents.safety_healthcare import SafetyHealthcareAgent
 from app.db.repositories.city import CityRepository
+from app.db.repositories.knowledge import KnowledgeRepository
 from app.models.agent import AgentRequest, AgentResult, AgentStatus, SourceProvenance
+from app.models.knowledge import KnowledgeEvidence
 from app.orchestrator.context import OrchestrationContext
 from app.orchestrator.result import AggregatedIntelligence
+from app.services.knowledge import KnowledgeService
 
 
 class UrbanLensOrchestrator:
@@ -28,20 +31,25 @@ class UrbanLensOrchestrator:
         self,
         database: Database | None = None,
         agents: dict[str, BaseAgent] | None = None,
+        knowledge_service: KnowledgeService | None = None,
     ) -> None:
         self.database = database
         self.city_repo = CityRepository(database) if database is not None else None
+        self.knowledge_repo = KnowledgeRepository(database) if database is not None else None
+        self.knowledge_service = knowledge_service or (
+            KnowledgeService(self.knowledge_repo) if self.knowledge_repo is not None else None
+        )
         if agents is not None:
             self._agents = agents
         elif database is not None:
             self._agents = {
-                "location": LocationAgent(database),
-                "environment": EnvironmentAgent(database),
-                "mobility": MobilityAgent(database),
-                "cost_of_living": CostAgent(database),
-                "accommodation": AccommodationAgent(database),
-                "education_culture": EducationLifestyleAgent(database),
-                "safety_healthcare": SafetyHealthcareAgent(database),
+                "location": LocationAgent(database, knowledge_service=self.knowledge_service),
+                "environment": EnvironmentAgent(database, knowledge_service=self.knowledge_service),
+                "mobility": MobilityAgent(database, knowledge_service=self.knowledge_service),
+                "cost_of_living": CostAgent(database, knowledge_service=self.knowledge_service),
+                "accommodation": AccommodationAgent(database, knowledge_service=self.knowledge_service),
+                "education_culture": EducationLifestyleAgent(database, knowledge_service=self.knowledge_service),
+                "safety_healthcare": SafetyHealthcareAgent(database, knowledge_service=self.knowledge_service),
             }
         else:
             self._agents = {}
@@ -437,12 +445,54 @@ class UrbanLensOrchestrator:
                 if r.summary:
                     summary_parts.append(f"[Safety & Healthcare]: {r.summary}")
 
+        # Collect grounded knowledge evidence from agents
+        collected_evidence: list[KnowledgeEvidence] = []
+        for r in results:
+            collected_evidence.extend(getattr(r, "knowledge_evidence", ()))
+
+        # Also retrieve query-level knowledge evidence if query and service exist
+        if context.query and self.knowledge_service:
+            try:
+                query_evidence = await self.knowledge_service.search_knowledge(
+                    query=context.query,
+                    city_id=city_id,
+                    top_k=3,
+                    min_score=0.1,
+                )
+                collected_evidence.extend(query_evidence)
+            except Exception:
+                pass
+
+        # Deduplicate evidence by chunk_id and register source provenance
+        unique_evidence: list[KnowledgeEvidence] = []
+        seen_chunks: set[str] = set()
+        for ev in collected_evidence:
+            if ev.chunk_id not in seen_chunks:
+                seen_chunks.add(ev.chunk_id)
+                unique_evidence.append(ev)
+                key = f"{ev.source}:knowledge"
+                if key not in seen_sources:
+                    seen_sources.add(key)
+                    all_sources.append(
+                        SourceProvenance(
+                            source_id=ev.source,
+                            provider="knowledge",
+                            retrieved_at=ev.retrieved_at,
+                            confidence=ev.retrieval_score or 1.0,
+                        )
+                    )
+
+        if unique_evidence:
+            sources_names = sorted(list(set(e.source for e in unique_evidence)))
+            summary_parts.append(
+                f"[Grounded Knowledge Evidence]: Found {len(unique_evidence)} documented reference(s) from {', '.join(sources_names)}."
+            )
+
         summary_prefix = (
             f"UrbanLens intelligence synthesized across {len(results)} agent domains "
             f"with status '{overall.value}'. Total grounded sources: {len(all_sources)}."
         )
         deterministic_summary = f"{summary_prefix} " + " ".join(summary_parts)
-
 
         return AggregatedIntelligence(
             city_id=city_id,
@@ -452,6 +502,7 @@ class UrbanLensOrchestrator:
             sources=tuple(all_sources),
             selected_agents=tuple(selected_agents),
             signals=tuple(signals),
+            knowledge_evidence=tuple(unique_evidence),
             warnings=tuple(all_warnings),
             unavailable_fields=tuple(all_unavailable),
             location=city_record,

@@ -385,8 +385,109 @@ The orchestrator (`app/orchestrator/orchestrator.py`):
   ```
   Returns `selected_agents`, normalized `results`, extracted `signals`, grounded `sources`, `warnings`, and deterministic `summary`.
 
-### Current Limitations
-- **No LLM or Vector DB:** Synthesis is purely deterministic, auditable, and rule-based. Gemini/LLM integration and vector-based semantic retrieval are deferred to subsequent phases.
+### Phase 4 Limitations Handed Over
+- In Phase 4, synthesis was strictly restricted to canonical database observations and live provider signals.
+
+---
+
+## Phase 5: Grounded RAG Knowledge Layer
+
+UrbanLens Phase 5 introduces a production-oriented, retrieval-augmented generation (RAG) knowledge layer. It grounds the platform in semi-structured documentation, official municipal policies, tenancy frameworks, and transport guidelines alongside canonical structured data and live API feeds.
+
+### Target Architecture
+
+```text
+User Query
+    ↓
+Orchestrator
+    ↓
+Relevant Agents
+    ├── MongoDB Structured Data (Canonical Baselines)
+    ├── Live APIs (Open-Meteo, Frankfurter FX, OSRM)
+    └── RAG Knowledge Retrieval (KnowledgeService)
+              ↓
+       Grounded Evidence (Traceable Chunks)
+              ↓
+       Provenance & Citations (Source URLs, Titles, Checksums)
+              ↓
+       Deterministic Synthesis (Explainable Multi-Source Summary)
+```
+
+### 1. Knowledge Document Model & Supported Categories
+
+Knowledge documents are represented by `KnowledgeDocument` in `app/models/knowledge.py` and stored in the `knowledge_documents` collection:
+- `document_id`: Deterministic prefix (`doc_<checksum[:12]>`).
+- `title`, `source`, `source_url`, `publisher`: Explicit publication metadata.
+- `country_id`, `city_id`: Canonical spatial mapping.
+- `category`: Bounded domain taxonomy.
+- `language`, `published_at`, `updated_at`, `fetched_at`: Temporal and linguistic tracking.
+- `content`, `checksum`: Normalized raw text and SHA-256 content checksum.
+- `metadata`, `status`: Structured annotations and ingestion status.
+
+Supported knowledge categories:
+`relocation`, `government`, `transport`, `healthcare`, `education`, `safety`, `culture`, `lifestyle`, `housing`, `immigration`, `environment`, `city_information`.
+
+### 2. Document Ingestion Pipeline
+
+The ingestion service (`KnowledgeIngestionService` in `app/services/knowledge_ingestion.py`):
+- **Normalization:** Cleans redundant whitespace, standardizes punctuation, and strips boilerplate safely.
+- **Deterministic Checksum:** Computes SHA-256 over normalized content to guarantee idempotency.
+- **Idempotency Guarantee:** If a document with identical checksum exists, re-ingestion returns the existing record without duplicate storage.
+- **No Uncontrolled Web Crawling:** Ingestion is controlled and explicit; bulk or uncontrolled crawling is strictly rejected.
+
+### 3. Boundary-Aware Deterministic Chunking
+
+The chunking engine (`app/services/chunking.py`):
+- Splits documents respecting natural boundary hierarchy: double line breaks (paragraphs), sentence delimiters (`. `, `! `, `? `), and token words.
+- Preserves context across chunks using configurable overlap (`chunk_size=600`, `chunk_overlap=100`).
+- Each chunk preserves `chunk_id`, `document_id`, `chunk_index`, `char_start`, `char_end`, `word_count`, `city_id`, `country_id`, and `category`.
+
+### 4. Pluggable Embedding Provider Abstraction
+
+Located in `app/providers/embedding/`:
+- **`BaseEmbeddingProvider`**: Interface defining `embed_text` and `embed_batch`.
+- **`DeterministicHashEmbeddingProvider`**: Local, reproducible signed SHA-256 n-gram feature hasher with unit L2 normalization. Operates offline without external vendor dependencies or paid APIs.
+- **Factory & Extensibility:** Switchable via `EMBEDDING_PROVIDER` configuration (`hash`, `mock`, or future hosted providers like OpenAI/Vertex). Unconfigured hosted providers fail fast and clearly.
+- **Anti-Fabrication:** Never invents fake embedding vectors or mock numbers.
+
+### 5. Grounded Semantic Retrieval & Vector Storage
+
+The knowledge repository (`KnowledgeRepository` in `app/db/repositories/knowledge.py`) and retrieval service (`KnowledgeService` in `app/services/knowledge.py`):
+- Stores chunk vectors and document metadata in MongoDB Atlas.
+- Executes cosine similarity matching over L2-normalized embeddings.
+- Supports strict metadata filtering by `city_id`, `country_id`, and `categories`.
+- Computes genuine mathematical similarity scores—no fabricated relevance numbers.
+
+### 6. RAG Provenance Model & Source Classification
+
+Retrieved chunks are formatted as `KnowledgeEvidence`:
+- `evidence_id`, `document_id`, `chunk_id`
+- `title`, `source`, `source_url`, `publisher`
+- `text`, `category`, `city_id`, `country_id`
+- `retrieved_at`, `retrieval_score`
+
+UrbanLens enforces a clear distinction between three source classes:
+1. **`LIVE`**: Dynamic real-time APIs (Open-Meteo, Frankfurter FX, OSRM).
+2. **`DATABASE`**: Validated MongoDB canonical structured benchmarks.
+3. **`KNOWLEDGE`**: Grounded RAG document chunks with explicit source citations.
+
+### 7. Agent & Orchestrator Integration
+
+- **Domain Agents:** Selected agents query `KnowledgeService` for their specific domain scopes (e.g. `LocationAgent` -> `city_information`, `EnvironmentAgent` -> `environment`, `MobilityAgent` -> `transport`).
+- **Orchestrator Synthesis:** Assembles structured signals, live signals, and knowledge citations into an explainable, deterministic report without LLM hallucination.
+
+### 8. Knowledge Endpoints
+
+- `GET /api/v1/knowledge/search`: Query grounded knowledge chunks with filters:
+  - Query parameters: `query`, `city_id`, `country_id`, `category`, `top_k`, `min_score`.
+- `POST /api/v1/knowledge/documents`: Ingest a verified knowledge document.
+- `GET /api/v1/knowledge/documents/{document_id}`: Retrieve a stored knowledge document by ID.
+- `POST /api/v1/intelligence/query`: Includes grounded `knowledge_evidence` array alongside structured `signals` and live `sources`.
+
+### Phase 5 Limitations
+- **No LLM Synthesis Yet:** Synthesis remains fully deterministic and rule-based; Gemini/LLM reasoning is scheduled for future phases.
+- **No Uncontrolled Web Crawling:** Ingestion is controlled via explicit document feeds or API ingestion.
+- **No Fabricated Knowledge:** Missing knowledge yields empty results rather than speculative answers.
 
 ---
 
@@ -464,7 +565,8 @@ The **UrbanLens source code, tooling, and application framework** are licensed u
 
 ## Future Roadmap
 
+- [x] **RAG Knowledge Layer:** Grounded document ingestion, deterministic boundary-aware chunking, pluggable embedding abstraction, and multi-source provenance (Phase 5).
 - [ ] **Live Provider Connectors:** Dynamic integration of real-time GTFS feeds and OpenWeather/AirNow live APIs.
-- [ ] **LLM Grounding / RAG Integration:** Seamlessly feed multi-agent grounded outputs into Gemini / LLM models for natural language explanations.
+- [ ] **LLM Grounding & Natural Language Synthesis:** Feed multi-agent grounded outputs and citations into Gemini / LLM models for conversational explanations.
 - [ ] **City Comparison Matrix:** Multi-city side-by-side benchmarking endpoint (`/api/v1/compare`).
 - [ ] **Geospatial GeoJSON Polygons:** Adding full administrative boundaries to city detail responses.

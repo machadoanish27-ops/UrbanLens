@@ -23,8 +23,9 @@ class EducationLifestyleAgent(BaseAgent):
         city_service: CityService | None = None,
         university_service: UniversityService | None = None,
         places_service: PlacesService | None = None,
+        knowledge_service: Any = None,
     ) -> None:
-        super().__init__(database)
+        super().__init__(database, knowledge_service=knowledge_service)
         self.city_service = city_service or (CityService(database) if database is not None else None)
         self.university_service = university_service or (UniversityService(database) if database is not None else None)
         self.places_service = places_service or (PlacesService(database) if database is not None else None)
@@ -134,6 +135,23 @@ class EducationLifestyleAgent(BaseAgent):
             f"Cultural POIs located: {len(cultural_places)} libraries/cultural venues."
         )
 
+        # Retrieve grounded knowledge evidence
+        ke_list = await self.retrieve_knowledge_evidence(
+            query=request.query,
+            city_id=city["city_id"],
+            categories=["education", "culture", "lifestyle"],
+            top_k=2,
+        )
+        for ev in ke_list:
+            sources.append(
+                SourceProvenance(
+                    source_id=ev.source,
+                    provider="knowledge",
+                    retrieved_at=ev.retrieved_at,
+                    confidence=ev.retrieval_score or 1.0,
+                )
+            )
+
         return AgentResult(
             agent_id=self.agent_id,
             status=AgentStatus.COMPLETE,
@@ -148,6 +166,7 @@ class EducationLifestyleAgent(BaseAgent):
                 "live_derived_fields": ["cultural_pois"],
             },
             sources=tuple(sources),
+            knowledge_evidence=tuple(ke_list),
             missing_data=(),
             unavailable_fields=(),
             warnings=tuple(warnings),

@@ -8,6 +8,8 @@ from app.services.currency import CurrencyService
 from app.services.data_freshness import freshness_status
 from app.services.geocoding import GeocodingService
 from app.services.intelligence import IntelligenceService
+from app.services.knowledge import KnowledgeService
+from app.services.knowledge_ingestion import KnowledgeIngestionService
 from app.services.orchestrator import AgentOrchestrator
 from app.services.places import PlacesService
 from app.services.routing import RoutingService
@@ -28,6 +30,8 @@ __all__ = [
     "TransitService",
     "UniversityService",
     "IntelligenceService",
+    "KnowledgeService",
+    "KnowledgeIngestionService",
     "AgentOrchestrator",
     "freshness_status",
 ]

@@ -23,8 +23,9 @@ class MobilityAgent(BaseAgent):
         city_service: CityService | None = None,
         transit_service: TransitService | None = None,
         routing_service: RoutingService | None = None,
+        knowledge_service: Any = None,
     ) -> None:
-        super().__init__(database)
+        super().__init__(database, knowledge_service=knowledge_service)
         self.city_service = city_service or (CityService(database) if database is not None else None)
         self.transit_service = transit_service or (TransitService(database) if database is not None else None)
         self.routing_service = routing_service or (RoutingService(database) if database is not None else None)
@@ -135,6 +136,23 @@ class MobilityAgent(BaseAgent):
         if route_data:
             summary += f" Sample corridor route: {route_data.get('distance_km')} km in {route_data.get('duration_min')} min."
 
+        # Retrieve grounded knowledge evidence
+        ke_list = await self.retrieve_knowledge_evidence(
+            query=request.query,
+            city_id=city["city_id"],
+            categories=["transport"],
+            top_k=2,
+        )
+        for ev in ke_list:
+            sources.append(
+                SourceProvenance(
+                    source_id=ev.source,
+                    provider="knowledge",
+                    retrieved_at=ev.retrieved_at,
+                    confidence=ev.retrieval_score or 1.0,
+                )
+            )
+
         return AgentResult(
             agent_id=self.agent_id,
             status=AgentStatus.COMPLETE if live_gtfs_connected else AgentStatus.PARTIAL,
@@ -149,6 +167,7 @@ class MobilityAgent(BaseAgent):
                 "note": "Mobility profile evaluated via demographic scale, GTFS availability, and OSRM routing.",
             },
             sources=tuple(sources),
+            knowledge_evidence=tuple(ke_list),
             missing_data=tuple(unavailable_fields),
             unavailable_fields=tuple(unavailable_fields),
             warnings=tuple(warnings),

@@ -26,8 +26,9 @@ class SafetyHealthcareAgent(BaseAgent):
         country_service: CountryService | None = None,
         air_quality_service: AirQualityService | None = None,
         places_service: PlacesService | None = None,
+        knowledge_service: Any = None,
     ) -> None:
-        super().__init__(database)
+        super().__init__(database, knowledge_service=knowledge_service)
         self.city_service = city_service or (CityService(database) if database is not None else None)
         self.country_service = country_service or (CountryService(database) if database is not None else None)
         self.air_quality_service = air_quality_service or (AirQualityService(database) if database is not None else None)
@@ -157,6 +158,23 @@ class SafetyHealthcareAgent(BaseAgent):
         env_summary = f"WHO PM2.5: {env_safety.get('who_pm25_annual_ug_m3')} µg/m³ ({env_safety.get('who_pm25_guideline_threshold_5ug')})" if env_safety else "Environmental health pending"
         summary = f"Healthcare infrastructure: {hosp_summary}. Environmental health: {env_summary}. Crime data: unconfigured."
 
+        # Retrieve grounded knowledge evidence
+        ke_list = await self.retrieve_knowledge_evidence(
+            query=request.query,
+            city_id=city["city_id"],
+            categories=["healthcare", "safety", "government"],
+            top_k=2,
+        )
+        for ev in ke_list:
+            sources.append(
+                SourceProvenance(
+                    source_id=ev.source,
+                    provider="knowledge",
+                    retrieved_at=ev.retrieved_at,
+                    confidence=ev.retrieval_score or 1.0,
+                )
+            )
+
         return AgentResult(
             agent_id=self.agent_id,
             status=status,
@@ -175,6 +193,7 @@ class SafetyHealthcareAgent(BaseAgent):
                 },
             },
             sources=tuple(sources),
+            knowledge_evidence=tuple(ke_list),
             missing_data=() if status == AgentStatus.COMPLETE else ("complete_safety_profile",),
             unavailable_fields=tuple(unavailable_fields),
             warnings=tuple(warnings),

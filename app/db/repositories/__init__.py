@@ -5,6 +5,7 @@ from app.db.repositories.base import BaseRepository, clean_mongo_doc
 from app.db.repositories.city import CityRepository
 from app.db.repositories.country import CountryRepository
 from app.db.repositories.cost_of_living import CostOfLivingRepository
+from app.db.repositories.knowledge import KnowledgeRepository
 from app.db.repositories.source import SourceRegistryRepository
 from app.db.repositories.university import UniversityRepository
 from app.db.repositories.weather import WeatherRepository
@@ -19,4 +20,5 @@ __all__ = [
     "CostOfLivingRepository",
     "UniversityRepository",
     "SourceRegistryRepository",
+    "KnowledgeRepository",
 ]

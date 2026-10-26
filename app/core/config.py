@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     OVERPASS_BASE_URL: str = "https://overpass-api.de/api/interpreter"
     GTFS_FEEDS: dict[str, str] = {}
 
+    # RAG Knowledge Layer
+    EMBEDDING_PROVIDER: str = "hash"
+    EMBEDDING_DIMENSION: int = 128
+    KNOWLEDGE_CHUNK_SIZE: int = 600
+    KNOWLEDGE_CHUNK_OVERLAP: int = 100
+    KNOWLEDGE_DEFAULT_TOP_K: int = 5
+
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",

@@ -10,6 +10,7 @@ from app.api.routes.currency import router as currency_router
 from app.api.routes.geocoding import router as geocoding_router
 from app.api.routes.health import router as health_router
 from app.api.routes.intelligence import router as intelligence_router
+from app.api.routes.knowledge import router as knowledge_router
 from app.api.routes.places import router as places_router
 from app.api.routes.routing import router as routing_router
 from app.api.routes.transit import router as transit_router
@@ -42,5 +43,6 @@ api_v1_router.include_router(places_router)
 api_v1_router.include_router(transit_router)
 api_v1_router.include_router(universities_router)
 api_v1_router.include_router(intelligence_router)
+api_v1_router.include_router(knowledge_router)
 
 __all__ = ["root_router", "api_v1_router"]

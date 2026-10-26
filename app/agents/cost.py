@@ -25,8 +25,9 @@ class CostAgent(BaseAgent):
         cost_service: CostOfLivingService | None = None,
         currency_service: CurrencyService | None = None,
         city_service: CityService | None = None,
+        knowledge_service: Any = None,
     ) -> None:
-        super().__init__(database)
+        super().__init__(database, knowledge_service=knowledge_service)
         self.cost_service = cost_service or (CostOfLivingService(database) if database is not None else None)
         self.currency_service = currency_service or (CurrencyService(database) if database is not None else None)
         self.city_service = city_service or (CityService(database) if database is not None else None)
@@ -129,6 +130,23 @@ class CostAgent(BaseAgent):
             f"Canonical cost baseline grounded: {len(metrics)} basket metrics recorded.{fx_summary}"
         )
 
+        # Retrieve grounded knowledge evidence
+        ke_list = await self.retrieve_knowledge_evidence(
+            query=request.query,
+            city_id=request.city_id,
+            categories=["housing", "relocation"],
+            top_k=2,
+        )
+        for ev in ke_list:
+            sources.append(
+                SourceProvenance(
+                    source_id=ev.source,
+                    provider="knowledge",
+                    retrieved_at=ev.retrieved_at,
+                    confidence=ev.retrieval_score or 1.0,
+                )
+            )
+
         return AgentResult(
             agent_id=self.agent_id,
             status=AgentStatus.COMPLETE,
@@ -140,6 +158,7 @@ class CostAgent(BaseAgent):
                 "data_source_mode": "canonical_baseline_with_live_fx" if live_fx else "canonical_baseline_only",
             },
             sources=tuple(sources),
+            knowledge_evidence=tuple(ke_list),
             missing_data=tuple(unavailable_fields),
             unavailable_fields=tuple(unavailable_fields),
             warnings=tuple(warnings),

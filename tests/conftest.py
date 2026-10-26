@@ -23,6 +23,12 @@ class MockCollection:
             elif isinstance(v, dict):
                 field_val = doc.get(k)
                 for op, op_val in v.items():
+                    if op == "$in" and (field_val not in op_val):
+                        return False
+                    if op == "$exists":
+                        exists = k in doc
+                        if exists != op_val:
+                            return False
                     if op == "$gte" and (field_val is None or field_val < op_val):
                         return False
                     if op == "$lte" and (field_val is None or field_val > op_val):
@@ -46,6 +52,39 @@ class MockCollection:
     def count_documents(self, query: dict[str, Any] | None = None) -> int:
         query = query or {}
         return sum(1 for d in self.documents if self._matches(d, query))
+
+    def replace_one(self, query: dict[str, Any], replacement: dict[str, Any], upsert: bool = False) -> Any:
+        class ReplaceResult:
+            def __init__(self, matched: int, modified: int, upserted_id: Any = None):
+                self.matched_count = matched
+                self.modified_count = modified
+                self.upserted_id = upserted_id
+        for idx, d in enumerate(self.documents):
+            if self._matches(d, query):
+                self.documents[idx] = replacement.copy()
+                return ReplaceResult(1, 1)
+        if upsert:
+            self.documents.append(replacement.copy())
+            return ReplaceResult(0, 0, replacement.get("_id") or replacement.get("id"))
+        return ReplaceResult(0, 0)
+
+    def delete_one(self, query: dict[str, Any]) -> Any:
+        class DeleteResult:
+            def __init__(self, count: int):
+                self.deleted_count = count
+        for idx, d in enumerate(self.documents):
+            if self._matches(d, query):
+                self.documents.pop(idx)
+                return DeleteResult(1)
+        return DeleteResult(0)
+
+    def delete_many(self, query: dict[str, Any]) -> Any:
+        class DeleteResult:
+            def __init__(self, count: int):
+                self.deleted_count = count
+        orig_len = len(self.documents)
+        self.documents = [d for d in self.documents if not self._matches(d, query)]
+        return DeleteResult(orig_len - len(self.documents))
 
     def create_index(self, *args, **kwargs) -> str:
         return "index_ok"
