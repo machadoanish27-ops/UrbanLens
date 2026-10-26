@@ -1,5 +1,6 @@
 """Air quality schemas preserving source datasets separately."""
 
+from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -41,3 +42,15 @@ class CityAirQualityResponse(BaseModel):
     global_weather: list[GlobalWeatherAqItem] = Field(default_factory=list)
     who_annual: list[WhoAqItem] = Field(default_factory=list)
     available_providers: list[str] = Field(default_factory=list)
+
+
+class LiveCityAirQualityResponse(BaseModel):
+    """Live air quality response with provenance and fallback metadata."""
+
+    city_id: str
+    city_name: str | None = None
+    latitude: float
+    longitude: float
+    air_quality: dict[str, Any] | None = None
+    meta: dict[str, Any]
+

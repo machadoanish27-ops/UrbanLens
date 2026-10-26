@@ -1,6 +1,11 @@
 """Schemas package."""
 
-from app.schemas.air_quality import CityAirQualityResponse, GlobalWeatherAqItem, WhoAqItem
+from app.schemas.air_quality import (
+    CityAirQualityResponse,
+    GlobalWeatherAqItem,
+    LiveCityAirQualityResponse,
+    WhoAqItem,
+)
 from app.schemas.city import (
     CityAliasItem,
     CityDetail,
@@ -18,6 +23,8 @@ from app.schemas.common import (
 )
 from app.schemas.cost import CityCostOfLivingResponse, CostOfLivingMetricItem
 from app.schemas.country import CountryDetail, CountryItem, CountryMetricItem, CountryMetricsResponse
+from app.schemas.currency import CurrencyConversionResponse
+from app.schemas.geocoding import GeocodingReverseResponse, GeocodingSearchResponse
 from app.schemas.intelligence import (
     AgentCatalogItem,
     AgentResultSchema,
@@ -25,10 +32,14 @@ from app.schemas.intelligence import (
     IntelligenceQueryResponse,
     SourceProvenanceSchema,
 )
+from app.schemas.places import PlacesSearchResponse
+from app.schemas.routing import RouteResponse
+from app.schemas.transit import TransitFeedResponse
 from app.schemas.university import UniversityDetail, UniversityItem, UniversityRankingItem
 from app.schemas.weather import (
     CityForecastResponse,
     CityWeatherResponse,
+    LiveCityWeatherResponse,
     WeatherForecastItem,
     WeatherObservationItem,
 )
@@ -53,11 +64,19 @@ __all__ = [
     "WeatherForecastItem",
     "CityWeatherResponse",
     "CityForecastResponse",
+    "LiveCityWeatherResponse",
     "GlobalWeatherAqItem",
     "WhoAqItem",
     "CityAirQualityResponse",
+    "LiveCityAirQualityResponse",
     "CostOfLivingMetricItem",
     "CityCostOfLivingResponse",
+    "CurrencyConversionResponse",
+    "GeocodingSearchResponse",
+    "GeocodingReverseResponse",
+    "PlacesSearchResponse",
+    "RouteResponse",
+    "TransitFeedResponse",
     "UniversityItem",
     "UniversityDetail",
     "UniversityRankingItem",

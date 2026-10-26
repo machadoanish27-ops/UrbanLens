@@ -251,9 +251,76 @@ MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/urbanlens
 MONGODB_DB=urbanlens
 ENVIRONMENT=development
 DEBUG=false
+
+# Live Intelligence Providers
+OPENAQ_API_KEY=your_openaq_api_key_here
 ```
 > [!CAUTION]
 > Never commit `.env` or paste real credentials into code. `.env` is protected by `.gitignore`.
+
+---
+
+## Live Intelligence Provider Layer
+
+UrbanLens integrates live, external data feeds through a strict, decoupled service architecture:
+
+```text
+       Agent (Domain Intelligence)
+                   │
+                   ▼
+          UrbanLens Service
+       (Fallback, Data Mediation)
+                   │
+                   ▼
+            Provider Adapter
+        (Typed External Adapter)
+                   │
+                   ▼
+              External API
+    (Open-Meteo, OpenAQ, Nominatim...)
+                   │
+                   ▼
+        Normalized UrbanLens Schema
+                   │
+                   ▼
+     Provenance + Timestamps + Status
+                   │
+                   ▼
+          Agent / Orchestrator
+```
+
+### Provider Architectural Invariants
+
+1. **Agents never call external providers directly:** All live interactions are mediated through UrbanLens services (`WeatherService`, `AirQualityService`, `CurrencyService`, `GeocodingService`, `RoutingService`, `PlacesService`, `TransitService`).
+2. **Providers are replaceable:** Each provider implements a typed abstract base class inheriting from `BaseProvider`.
+3. **No fabricated confidence scores:** Confidence values are reported only when natively supplied by the upstream provider.
+4. **Never disguise stale data as live:** If an external provider fails and the service falls back to MongoDB ground-truth observations, the status is explicitly set to `database`, and the original observation timestamp is preserved.
+
+### Fallback Hierarchy
+
+When a service requests live intelligence for an urban domain:
+1. **Fresh live provider:** Query active external provider adapter.
+2. **Fresh cache:** (Clean architectural extension point for upcoming caching layers).
+3. **Canonical database observation:** If the live provider is unreachable, times out, or reports errors, fallback to verified MongoDB historical ground-truth observations (`status="database"`).
+4. **Secondary provider:** (If configured).
+5. **Explicit `DATA_UNAVAILABLE`:** Explicitly communicate that data is unavailable without returning fabricated or zeroed mock numbers.
+
+### Provider Matrix
+
+| Domain | Provider | Endpoint / Protocol | Requires API Key? | Environment Variable | Attribution & License Note |
+|--------|----------|---------------------|-------------------|----------------------|----------------------------|
+| **Weather** | Open-Meteo | `https://api.open-meteo.com/v1/forecast` | No | None | Free for non-commercial use with attribution to Open-Meteo. |
+| **Air Quality** | OpenAQ | `https://api.openaq.org/v3/locations` | **Yes** | `OPENAQ_API_KEY` | OpenAQ Open Data Platform; requires valid `X-API-Key`. |
+| **Currency** | Frankfurter | `https://api.frankfurter.dev/v1/latest` | No | None | Open exchange rate data published by the European Central Bank (ECB). |
+| **Geocoding** | Nominatim | `https://nominatim.openstreetmap.org` | No | None | © OpenStreetMap contributors (ODbL). Must send valid descriptive `User-Agent`. Limit: max 1 req/sec. |
+| **Routing** | Project OSRM | `http://router.project-osrm.org` | No | None | © Project OSRM and OSM contributors. Basic demo routing; not for heavy navigation. |
+| **Places (POI)** | OSM Overpass | `https://overpass-api.de/api/interpreter` | No | None | © OpenStreetMap contributors. Controlled bounded queries only (max 5000m radius). |
+| **Public Transit** | GTFS / GTFS-RT | Federated local agency feeds | No (Federated) | `GTFS_FEEDS` | Public transit feeds are decentralized by agency. UrbanLens rejects claiming universal global real-time coverage. |
+
+> [!WARNING]
+> **Provider Rate Limits and Licensing Notice:**
+> Provider usage tiers, terms of service, rate limits, and licensing terms are set by upstream providers and can change over time. Do not assume unlimited free usage, and do not assume commercial rights without directly verifying individual provider licenses. When running high-throughput production workloads, configure dedicated or self-hosted provider instances.
+
 
 ---
 

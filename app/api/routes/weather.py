@@ -8,12 +8,32 @@ from app.schemas.common import ApiResponse, ResponseMeta
 from app.schemas.weather import (
     CityForecastResponse,
     CityWeatherResponse,
+    LiveCityWeatherResponse,
     WeatherForecastItem,
     WeatherObservationItem,
 )
 from app.services.weather import WeatherService
 
 router = APIRouter(prefix="/cities", tags=["Weather"])
+
+
+@router.get(
+    "/{city_id}/weather/live",
+    response_model=ApiResponse[LiveCityWeatherResponse],
+    summary="Get live weather and forecast via Open-Meteo with fallback",
+)
+async def get_city_weather_live(
+    city_id: str,
+    forecast_days: int = Query(7, ge=1, le=16, description="Forecast days horizon (1-16)"),
+    database: Database = Depends(get_db),
+) -> ApiResponse[LiveCityWeatherResponse]:
+    """Retrieve normalized live weather observations and daily forecasts with multi-tier fallback."""
+    service = WeatherService(database)
+    result = await service.get_live_weather(city_id=city_id, forecast_days=forecast_days)
+    return ApiResponse(
+        data=LiveCityWeatherResponse(**result),
+        meta=ResponseMeta(source=result.get("meta", {}).get("source", "Open-Meteo Live Weather")),
+    )
 
 
 @router.get(
@@ -67,3 +87,4 @@ def get_city_forecast(
         ),
         meta=ResponseMeta(source="weather_forecasts_wmo"),
     )
+

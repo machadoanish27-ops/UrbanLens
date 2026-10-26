@@ -1,5 +1,6 @@
 """Weather and forecast schemas."""
 
+from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -48,3 +49,15 @@ class CityForecastResponse(BaseModel):
     city_id: str
     provider: str = "WMO"
     forecasts: list[WeatherForecastItem] = Field(default_factory=list)
+
+
+class LiveCityWeatherResponse(BaseModel):
+    """Live weather and forecast response with provenance and fallback metadata."""
+
+    city_id: str
+    city_name: str | None = None
+    latitude: float
+    longitude: float
+    weather: dict[str, Any] | None = None
+    meta: dict[str, Any]
+

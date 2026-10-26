@@ -73,6 +73,6 @@ class ProvenanceInfo(BaseModel):
     provider: str | None = None
     observed_at: str | None = None
     fetched_at: str | None = None
-    confidence: float | None = None
+    confidence: str | float | None = None
     source_row: int | None = None
     source_record_key: str | None = None

@@ -8,7 +8,7 @@ class CityAliasItem(BaseModel):
     """An alias or alternate naming for a city."""
 
     alias: str
-    normalized_alias: str
+    normalized_alias: str | None = None
     alias_source: str | None = None
     mapping_version: str | None = None
 
@@ -17,13 +17,13 @@ class CityProviderIdentityItem(BaseModel):
     """A cross-reference identity linking this city to an external provider."""
 
     provider: str
-    provider_location_id: str
+    provider_location_id: str | int
     provider_name_raw: str | None = None
     provider_country_code: str | None = None
     latitude: float | None = None
     longitude: float | None = None
     match_method: str | None = None
-    confidence: float | None = None
+    confidence: str | float | None = None
     status: str | None = None
 
 
@@ -32,14 +32,14 @@ class CityListItem(BaseModel):
 
     city_id: str
     worldcities_id: int | None = None
-    name: str
+    name: str | None = None
     name_ascii: str | None = None
     country_id: str | None = None
     country_iso2: str | None = None
     country_iso3: str | None = None
     admin_name: str | None = None
     capital: str | None = None
-    population: int | None = None
+    population: int | float | None = None
     latitude: float | None = None
     longitude: float | None = None
 
@@ -48,9 +48,9 @@ class CityDetail(CityListItem):
     """Detailed city representation including aliases and provider cross-references."""
 
     population_unavailable: bool | None = None
-    geonames_id: str | None = None
+    geonames_id: int | str | None = None
     identity_status: str | None = None
-    identity_confidence: float | None = None
+    identity_confidence: str | float | None = None
     review_required: bool | None = None
     identity_relationship: str | None = None
     source_id: str | None = None

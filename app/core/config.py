@@ -32,6 +32,18 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
 
+    # Live Intelligence Providers
+    PROVIDER_TIMEOUT_SECONDS: float = 8.0
+    OPENAQ_API_KEY: str | None = None
+    OPENAQ_BASE_URL: str = "https://api.openaq.org/v3"
+    OPEN_METEO_BASE_URL: str = "https://api.open-meteo.com/v1"
+    FRANKFURTER_BASE_URL: str = "https://api.frankfurter.dev/v1"
+    NOMINATIM_BASE_URL: str = "https://nominatim.openstreetmap.org"
+    NOMINATIM_USER_AGENT: str = "UrbanLens/0.1.0 (urbanlens@urbanlens.local)"
+    OSRM_BASE_URL: str = "http://router.project-osrm.org"
+    OVERPASS_BASE_URL: str = "https://overpass-api.de/api/interpreter"
+    GTFS_FEEDS: dict[str, str] = {}
+
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",
