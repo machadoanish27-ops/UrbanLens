@@ -22,6 +22,7 @@ class SourceProvenanceSchema(BaseModel):
     observed_at: str | None = None
     retrieved_at: str | None = None
     source_version: str | None = None
+    confidence: float | None = None
 
 
 class AgentResultSchema(BaseModel):
@@ -32,17 +33,38 @@ class AgentResultSchema(BaseModel):
     data: dict[str, Any] = Field(default_factory=dict)
     sources: list[SourceProvenanceSchema] = Field(default_factory=list)
     missing_data: list[str] = Field(default_factory=list)
+    unavailable_fields: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     detail: str | None = None
+    summary: str | None = None
+    confidence: float = 1.0
+    observed_at: str | None = None
+    fetched_at: str | None = None
+
+
+class IntelligenceSignalSchema(BaseModel):
+    """Normalized metric signal extracted from agent observations."""
+
+    domain: str
+    metric: str
+    value: Any
+    source: str | None = None
 
 
 class IntelligenceQueryRequest(BaseModel):
     """Request payload for multi-agent intelligence queries."""
 
-    city_id: str
-    query: str | None = None
+    city_id: str | None = Field(
+        default=None,
+        description="Optional canonical city identifier. If omitted, resolved from query text.",
+    )
+    query: str | None = Field(
+        default=None,
+        description="Natural language intelligence query.",
+    )
     agents: list[str] | None = Field(
         default=None,
-        description="Optional subset of agent IDs to execute. If omitted, all relevant agents are consulted.",
+        description="Optional subset of agent IDs to execute. If omitted, deterministically routed.",
     )
 
 
@@ -52,4 +74,10 @@ class IntelligenceQueryResponse(BaseModel):
     city_id: str
     query: str | None = None
     overall_status: str
+    location: dict[str, Any] = Field(default_factory=dict)
+    selected_agents: list[str] = Field(default_factory=list)
     results: list[AgentResultSchema] = Field(default_factory=list)
+    signals: list[dict[str, Any]] = Field(default_factory=list)
+    summary: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    sources: list[SourceProvenanceSchema] = Field(default_factory=list)

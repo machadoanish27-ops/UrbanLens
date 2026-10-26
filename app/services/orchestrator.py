@@ -4,7 +4,6 @@ from typing import Protocol
 
 from app.agents.catalog import AGENT_CATALOG
 from app.models.agent import AgentRequest, AgentResult, AgentStatus
-from app.orchestrator.orchestrator import UrbanLensOrchestrator
 
 
 class Agent(Protocol):

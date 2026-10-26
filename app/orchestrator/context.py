@@ -9,7 +9,7 @@ from typing import Any, Sequence
 class OrchestrationContext:
     """Context object encapsulating the user request, targets, and retrieval state."""
 
-    city_id: str
+    city_id: str | None = None
     query: str | None = None
     target_agents: tuple[str, ...] = ()
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())

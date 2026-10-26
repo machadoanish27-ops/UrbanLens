@@ -39,20 +39,20 @@ def list_agents(
     response_model=ApiResponse[IntelligenceQueryResponse],
     summary="Execute multi-agent intelligence query",
 )
-def query_intelligence(
+async def query_intelligence(
     request: IntelligenceQueryRequest,
     database: Database = Depends(get_db),
 ) -> ApiResponse[IntelligenceQueryResponse]:
-    """Execute domain agents coordinated by the orchestrator for a city."""
+    """Execute domain agents coordinated by the deterministic orchestrator for a city or query."""
     service = IntelligenceService(database)
-    raw = service.query(
+    raw = await service.query_async(
         city_id=request.city_id,
         query=request.query,
         target_agents=request.agents,
     )
 
     results_objs = []
-    for r in raw["results"]:
+    for r in raw.get("results", []):
         sources = [SourceProvenanceSchema(**s) for s in r.get("sources", [])]
         results_objs.append(
             AgentResultSchema(
@@ -61,16 +61,30 @@ def query_intelligence(
                 data=r.get("data", {}),
                 sources=sources,
                 missing_data=r.get("missing_data", []),
+                unavailable_fields=r.get("unavailable_fields", []),
+                warnings=r.get("warnings", []),
                 detail=r.get("detail"),
+                summary=r.get("summary"),
+                confidence=r.get("confidence", 1.0),
+                observed_at=r.get("observed_at"),
+                fetched_at=r.get("fetched_at"),
             )
         )
+
+    all_sources_objs = [SourceProvenanceSchema(**s) for s in raw.get("sources", [])]
 
     return ApiResponse(
         data=IntelligenceQueryResponse(
             city_id=raw["city_id"],
             query=raw.get("query"),
             overall_status=raw["overall_status"],
+            location=raw.get("location", {}),
+            selected_agents=raw.get("selected_agents", []),
             results=results_objs,
+            signals=raw.get("signals", []),
+            summary=raw.get("summary"),
+            warnings=raw.get("warnings", []),
+            sources=all_sources_objs,
         ),
         meta=ResponseMeta(source="urbanlens_orchestrator"),
     )
@@ -81,17 +95,17 @@ def query_intelligence(
     response_model=ApiResponse[IntelligenceQueryResponse],
     summary="Get multi-agent intelligence for a city",
 )
-def get_city_intelligence(
+async def get_city_intelligence(
     city_id: str,
     q: str | None = Query(None, description="Optional natural query context"),
     database: Database = Depends(get_db),
 ) -> ApiResponse[IntelligenceQueryResponse]:
     """Run all domain agents for a city and return aggregated intelligence."""
     service = IntelligenceService(database)
-    raw = service.query(city_id=city_id, query=q)
+    raw = await service.query_async(city_id=city_id, query=q)
 
     results_objs = []
-    for r in raw["results"]:
+    for r in raw.get("results", []):
         sources = [SourceProvenanceSchema(**s) for s in r.get("sources", [])]
         results_objs.append(
             AgentResultSchema(
@@ -100,16 +114,30 @@ def get_city_intelligence(
                 data=r.get("data", {}),
                 sources=sources,
                 missing_data=r.get("missing_data", []),
+                unavailable_fields=r.get("unavailable_fields", []),
+                warnings=r.get("warnings", []),
                 detail=r.get("detail"),
+                summary=r.get("summary"),
+                confidence=r.get("confidence", 1.0),
+                observed_at=r.get("observed_at"),
+                fetched_at=r.get("fetched_at"),
             )
         )
+
+    all_sources_objs = [SourceProvenanceSchema(**s) for s in raw.get("sources", [])]
 
     return ApiResponse(
         data=IntelligenceQueryResponse(
             city_id=raw["city_id"],
             query=raw.get("query"),
             overall_status=raw["overall_status"],
+            location=raw.get("location", {}),
+            selected_agents=raw.get("selected_agents", []),
             results=results_objs,
+            signals=raw.get("signals", []),
+            summary=raw.get("summary"),
+            warnings=raw.get("warnings", []),
+            sources=all_sources_objs,
         ),
         meta=ResponseMeta(source="urbanlens_orchestrator"),
     )

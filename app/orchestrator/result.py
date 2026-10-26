@@ -1,6 +1,7 @@
 """Aggregated intelligence result representations."""
 
 from dataclasses import dataclass, field
+from typing import Any
 from app.models.agent import AgentResult, AgentStatus, SourceProvenance
 
 
@@ -14,3 +15,10 @@ class AggregatedIntelligence:
     all_sources: tuple[SourceProvenance, ...] = field(default_factory=tuple)
     summary: str | None = None
     query: str | None = None
+    location: dict[str, Any] = field(default_factory=dict)
+    selected_agents: tuple[str, ...] = ()
+    signals: tuple[dict[str, Any], ...] = ()
+    warnings: tuple[str, ...] = ()
+    sources: tuple[SourceProvenance, ...] = ()
+    unavailable_fields: tuple[str, ...] = ()
+

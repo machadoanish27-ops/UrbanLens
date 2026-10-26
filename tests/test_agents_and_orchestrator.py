@@ -98,7 +98,7 @@ def test_safety_healthcare_agent_execution() -> None:
 def test_orchestrator_multi_agent_synthesis() -> None:
     db = MockDatabase()
     orchestrator = UrbanLensOrchestrator(database=db)
-    context = OrchestrationContext(city_id="tokyo_jp", query="climate and universities")
+    context = OrchestrationContext(city_id="tokyo_jp", query="Should I move to Tokyo? Full relocation overview.")
     aggregated = orchestrator.synthesize(context)
 
     assert aggregated.city_id == "tokyo_jp"

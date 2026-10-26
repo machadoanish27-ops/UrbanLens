@@ -3,6 +3,7 @@
 from typing import Any
 from pymongo.database import Database
 
+from app.core.cache import InMemoryTTLCache, build_cache_key, service_cache
 from app.core.exceptions import DataUnavailableException, ResourceNotFoundException
 from app.core.logging import get_logger
 from app.db.repositories.city import CityRepository
@@ -25,11 +26,13 @@ class WeatherService:
         self,
         database: Database,
         provider: BaseWeatherProvider | None = None,
+        cache: InMemoryTTLCache | None = service_cache,
     ) -> None:
         self.database = database
         self.weather_repo = WeatherRepository(database)
         self.city_repo = CityRepository(database)
         self.provider = provider or OpenMeteoWeatherProvider()
+        self.cache = cache
 
     def get_weather(self, city_id: str, provider: str | None = None, limit: int = 10) -> dict[str, Any]:
         """Fetch latest weather observation and historical records for a city from database."""
@@ -76,6 +79,16 @@ class WeatherService:
                 reason="Canonical city record lacks latitude/longitude coordinates.",
             )
 
+        # Check in-memory cache for live weather
+        prov_name = getattr(self.provider, "provider_name", "weather")
+        cache_key = build_cache_key("weather", provider=prov_name, city_id=city_id, forecast_days=forecast_days)
+        if self.cache:
+            cached = self.cache.get(cache_key)
+            if cached:
+                cached_res = dict(cached)
+                cached_res["meta"] = {**cached.get("meta", {}), "cached": True}
+                return cached_res
+
         # 1. Attempt live provider
         res = await self.provider.get_weather(
             latitude=float(latitude),
@@ -84,7 +97,7 @@ class WeatherService:
         )
 
         if res.is_successful and res.data:
-            return {
+            result = {
                 "city_id": city_id,
                 "city_name": city.get("name"),
                 "latitude": float(latitude),
@@ -92,6 +105,9 @@ class WeatherService:
                 "weather": res.data.model_dump(),
                 "meta": res.meta.model_dump(),
             }
+            if self.cache:
+                self.cache.set(cache_key, result, ttl_seconds=300.0)
+            return result
 
         # 2. Fallback to MongoDB ground-truth observations
         return self._build_database_fallback(

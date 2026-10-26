@@ -338,6 +338,58 @@ Access the interactive API documentation:
 
 ---
 
+## Phase 4: Real Agent Intelligence & Orchestration
+
+UrbanLens Phase 4 operationalizes the seven domain intelligence agents into fully functioning, service-backed evaluators coordinated by a deterministic orchestrator.
+
+### Seven Modular Intelligence Agents
+
+1. **`LocationAgent`:** Anchors canonical city demographics, coordinates, country records, and location geocoding/POI metadata via `CityService`, `GeocodingService`, and `PlacesService`.
+2. **`EnvironmentAgent`:** Retrieves real-time meteorological observations and AQI metrics via `WeatherService` and `AirQualityService`, with historical database fallbacks and explicit observation timestamps.
+3. **`MobilityAgent`:** Evaluates intra-city commute routes and public transport metrics via `RoutingService` and `TransitService`, explicitly reporting unconfigured GTFS providers without fabrication.
+4. **`CostAgent`:** Evaluates canonical cost-of-living indices and itemized expense baskets against live currency exchange rates via `CostOfLivingService` and `CurrencyService`, strictly preserving baseline price grounding.
+5. **`AccommodationAgent`:** Gathers locality amenities and rental baseline indicators using `CostOfLivingService` and `PlacesService`, explicitly flagging unavailable vacancy listings.
+6. **`EducationLifestyleAgent`:** Analyzes accredited institutions, QS/THE academic ranking histories, and cultural POIs using `UniversityService` and `PlacesService`.
+7. **`SafetyHealthcareAgent`:** Assesses medical facilities (hospitals, clinics) via `PlacesService`, air health criteria (WHO PM2.5 baselines), and national health metrics, strictly refusing to fabricate arbitrary crime or safety ratings.
+
+### Service-Mediated Architecture & Fallback Contract
+
+Agents **never** communicate with external third-party APIs or databases directly. All data access is mediated by the application service layer:
+
+```text
+User Query ──> Orchestrator ──> Relevant Agents ──> Application Services ──> [Live Provider | Cache | DB Fallback]
+```
+
+Every live-capable service strictly enforces a deterministic fallback hierarchy:
+1. **Fresh live provider:** Real-time data from configured external APIs (e.g., Open-Meteo, Franker/FX).
+2. **Cached live response:** High-efficiency, thread-safe in-memory TTL cache (`app/core/cache.py`) prevents redundant public API requests and honors provider namespaces.
+3. **Canonical database observation:** Validated MongoDB historical baseline records.
+4. **Explicit unavailable status:** Missing metrics are clearly recorded as `unavailable` or `error` with explanatory warnings.
+
+### Deterministic Orchestration & Explainable Synthesis
+
+The orchestrator (`app/orchestrator/orchestrator.py`):
+- **Resolves City Context:** Identifies target cities from natural language queries (filtering conversational stop words against the alias index and canonical registry) or accepts explicit `city_id` parameters.
+- **Keyword Domain Routing:** Maps query intent to relevant agents (e.g., weather keywords to `EnvironmentAgent`, commute terms to `MobilityAgent`, relocation queries to the complete 7-agent suite).
+- **Concurrent Execution:** Dispatches agent requests asynchronously via `asyncio`.
+- **Explainable Synthesis:** Assembles structured signals, warnings, grounded source citations, and deterministic summaries without relying on an unverified LLM or vector database.
+
+### Intelligence Endpoint
+
+- **`POST /api/v1/intelligence/query`**: Queries the deterministic orchestrator. Accepts natural language questions (`"query"`) and optional `"city_id"`:
+  ```json
+  {
+    "query": "Should I move to Mumbai?",
+    "city_id": "city_1356226629"
+  }
+  ```
+  Returns `selected_agents`, normalized `results`, extracted `signals`, grounded `sources`, `warnings`, and deterministic `summary`.
+
+### Current Limitations
+- **No LLM or Vector DB:** Synthesis is purely deterministic, auditable, and rule-based. Gemini/LLM integration and vector-based semantic retrieval are deferred to subsequent phases.
+
+---
+
 ## Testing
 
 Run the automated test suite with `pytest`:

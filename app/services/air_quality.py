@@ -3,6 +3,7 @@
 from typing import Any
 from pymongo.database import Database
 
+from app.core.cache import InMemoryTTLCache, build_cache_key, service_cache
 from app.core.exceptions import ResourceNotFoundException
 from app.core.logging import get_logger
 from app.db.repositories.air_quality import AirQualityRepository
@@ -25,11 +26,13 @@ class AirQualityService:
         self,
         database: Database,
         provider: BaseAirQualityProvider | None = None,
+        cache: InMemoryTTLCache | None = service_cache,
     ) -> None:
         self.database = database
         self.aq_repo = AirQualityRepository(database)
         self.city_repo = CityRepository(database)
         self.provider = provider or OpenAQAirQualityProvider()
+        self.cache = cache
 
     def get_air_quality(self, city_id: str, limit: int = 10) -> dict[str, Any]:
         """Fetch both Global Weather and WHO datasets while maintaining dataset separation."""
@@ -70,6 +73,16 @@ class AirQualityService:
                 reason="City lacks geographic coordinates for live station proximity matching.",
             )
 
+        # Check cache for live air quality
+        prov_name = getattr(self.provider, "provider_name", "air_quality")
+        cache_key = build_cache_key("air_quality", provider=prov_name, city_id=city_id, radius=radius)
+        if self.cache:
+            cached = self.cache.get(cache_key)
+            if cached:
+                cached_res = dict(cached)
+                cached_res["meta"] = {**cached.get("meta", {}), "cached": True}
+                return cached_res
+
         # 1. Attempt live provider
         res = await self.provider.get_air_quality(
             latitude=float(latitude),
@@ -78,7 +91,7 @@ class AirQualityService:
         )
 
         if res.is_successful and res.data:
-            return {
+            result = {
                 "city_id": city_id,
                 "city_name": city.get("name"),
                 "latitude": float(latitude),
@@ -86,6 +99,9 @@ class AirQualityService:
                 "air_quality": res.data.model_dump(),
                 "meta": res.meta.model_dump(),
             }
+            if self.cache:
+                self.cache.set(cache_key, result, ttl_seconds=300.0)
+            return result
 
         # 2. Fallback to MongoDB ground-truth observations
         return self._build_database_fallback(

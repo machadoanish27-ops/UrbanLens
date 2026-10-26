@@ -1,5 +1,7 @@
 """Base abstract agent contract for UrbanLens domain intelligence agents."""
 
+import asyncio
+import concurrent.futures
 from abc import ABC, abstractmethod
 from typing import Any
 from pymongo.database import Database
@@ -31,12 +33,29 @@ class BaseAgent(ABC):
         """Domain coverage description."""
         ...
 
-    @abstractmethod
-    def execute(self, request: AgentRequest) -> AgentResult:
-        """Execute agent analysis for the provided request and return grounded results."""
-        ...
+    async def execute_async(self, request: AgentRequest) -> AgentResult:
+        """Execute agent analysis asynchronously. Default delegates to synchronous execute."""
+        return self.execute(request)
 
-    def create_unavailable_result(self, detail: str, missing_data: tuple[str, ...] = ()) -> AgentResult:
+    def execute(self, request: AgentRequest) -> AgentResult:
+        """Execute agent analysis synchronously. If subclasses only implement execute_async, runs it."""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, self.execute_async(request)).result()
+        return asyncio.run(self.execute_async(request))
+
+    def create_unavailable_result(
+        self,
+        detail: str,
+        missing_data: tuple[str, ...] = (),
+        warnings: tuple[str, ...] = (),
+        confidence: float = 0.0,
+    ) -> AgentResult:
         """Helper to construct a standardized unavailable result."""
         return AgentResult(
             agent_id=self.agent_id,
@@ -44,5 +63,10 @@ class BaseAgent(ABC):
             data={},
             sources=(),
             missing_data=missing_data,
+            unavailable_fields=missing_data,
             detail=detail,
+            summary=detail,
+            warnings=warnings,
+            confidence=confidence,
         )
+

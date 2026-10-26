@@ -203,12 +203,20 @@ def test_intelligence_agent_endpoints(client: TestClient) -> None:
     assert intel_body["data"]["city_id"] == "tokyo_jp"
     assert len(intel_body["data"]["results"]) == 7
 
-    # POST query
-    post_resp = client.post("/api/v1/intelligence/query", json={"city_id": "tokyo_jp", "query": "cost of living and universities"})
+    # POST query with general relocation intent executes all 7 agents
+    post_resp = client.post("/api/v1/intelligence/query", json={"city_id": "tokyo_jp", "query": "Should I move to Tokyo? Overview"})
     assert post_resp.status_code == 200
     post_body = post_resp.json()
     assert post_body["data"]["city_id"] == "tokyo_jp"
     assert len(post_body["data"]["results"]) == 7
+
+    # Targeted query routes to relevant agents
+    targeted_resp = client.post("/api/v1/intelligence/query", json={"city_id": "tokyo_jp", "query": "cost of living and universities"})
+    assert targeted_resp.status_code == 200
+    targeted_body = targeted_resp.json()
+    assert set(targeted_body["data"]["selected_agents"]) == {"cost_of_living", "education_culture"}
+    assert len(targeted_body["data"]["results"]) == 2
+
 
 
 def test_pagination_validation_and_limits(client: TestClient) -> None:

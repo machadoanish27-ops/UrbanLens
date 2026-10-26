@@ -9,6 +9,8 @@ class AgentStatus(StrEnum):
     UNAVAILABLE = "unavailable"
     STALE = "stale"
     ERROR = "error"
+    FRESH = "fresh"
+    DATABASE = "database"
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,7 @@ class SourceProvenance:
     observed_at: str | None = None
     retrieved_at: str | None = None
     source_version: str | None = None
+    confidence: float | None = None
 
 
 @dataclass(frozen=True)
@@ -34,3 +37,9 @@ class AgentResult:
     sources: tuple[SourceProvenance, ...] = ()
     missing_data: tuple[str, ...] = ()
     detail: str | None = None
+    summary: str | None = None
+    confidence: float = 1.0
+    warnings: tuple[str, ...] = ()
+    unavailable_fields: tuple[str, ...] = ()
+    observed_at: str | None = None
+    fetched_at: str | None = None

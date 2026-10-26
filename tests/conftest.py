@@ -257,3 +257,13 @@ def client(mock_db: MockDatabase) -> TestClient:
     test_client = TestClient(app)
     yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_service_cache():
+    """Clear service-layer in-memory cache between all test runs for strict test isolation."""
+    from app.core.cache import service_cache
+    service_cache.clear()
+    yield
+    service_cache.clear()
+
