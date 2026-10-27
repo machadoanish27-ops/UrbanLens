@@ -1,5 +1,4 @@
-"""Air quality schemas preserving source datasets separately."""
-
+from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, Field
 
@@ -9,7 +8,7 @@ class GlobalWeatherAqItem(BaseModel):
 
     city_id: str
     provider: str
-    observed_at: str | None = None
+    observed_at: datetime | str | None = None
     aqi_us_epa: int | float | None = None
     pm25: float | None = None
     pm10: float | None = None
