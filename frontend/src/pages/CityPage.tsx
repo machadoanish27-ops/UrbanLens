@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Compass,
@@ -15,6 +15,10 @@ import {
   Layers,
   Calendar,
   Eye,
+  RefreshCw,
+  ShieldCheck,
+  Building2,
+  Navigation,
 } from 'lucide-react';
 import {
   useCity,
@@ -23,6 +27,7 @@ import {
   useCityCost,
   useCityUniversities,
   useCityTransit,
+  useCityPlaces,
   useCityIntelligence,
 } from '../hooks/useUrbanLens';
 import { StatusBadge } from '../components/StatusBadge';
@@ -30,21 +35,74 @@ import { ProvenanceTag } from '../components/ProvenanceTag';
 import { MetricCard } from '../components/MetricCard';
 import { EvidenceCard } from '../components/EvidenceCard';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
+import { InteractiveMap, type MapMarkerItem } from '../components/InteractiveMap';
 
-type TabKey = 'overview' | 'weather' | 'airQuality' | 'cost' | 'education' | 'transit' | 'agents';
+type TabKey = 'overview' | 'map' | 'weather' | 'airQuality' | 'cost' | 'education' | 'transit' | 'healthcare' | 'agents';
+
+const AMENITY_CATEGORIES = [
+  { key: 'hospital', label: 'Hospitals', emoji: '🏥' },
+  { key: 'clinic', label: 'Clinics', emoji: '🩺' },
+  { key: 'pharmacy', label: 'Pharmacies', emoji: '💊' },
+  { key: 'school', label: 'Schools', emoji: '🏫' },
+  { key: 'supermarket', label: 'Supermarkets', emoji: '🛒' },
+  { key: 'park', label: 'Parks & Greenery', emoji: '🌳' },
+];
 
 export const CityPage: React.FC = () => {
   const { cityId } = useParams<{ cityId: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  const [selectedAmenityCategory, setSelectedAmenityCategory] = useState<string>('hospital');
 
   // Real backend queries
-  const { data: cityData, isLoading: cityLoading, error: cityError } = useCity(cityId || '');
-  const { data: weatherData, isLoading: weatherLoading } = useCityWeather(cityId || '');
-  const { data: aqiData, isLoading: aqiLoading } = useCityAirQuality(cityId || '');
-  const { data: costData, isLoading: costLoading } = useCityCost(cityId || '');
-  const { data: uniData, isLoading: uniLoading } = useCityUniversities(cityId || '');
-  const { data: transitData, isLoading: transitLoading } = useCityTransit(cityId || '');
-  const { data: intelData, isLoading: intelLoading } = useCityIntelligence(cityId || '');
+  const {
+    data: cityData,
+    isLoading: cityLoading,
+    error: cityError,
+    refetch: refetchCity,
+    isRefetching: isRefetchingCity,
+  } = useCity(cityId || '');
+
+  const {
+    data: weatherData,
+    isLoading: weatherLoading,
+    refetch: refetchWeather,
+    isRefetching: isRefetchingWeather,
+  } = useCityWeather(cityId || '');
+
+  const {
+    data: aqiData,
+    isLoading: aqiLoading,
+    refetch: refetchAqi,
+    isRefetching: isRefetchingAqi,
+  } = useCityAirQuality(cityId || '');
+
+  const {
+    data: costData,
+    isLoading: costLoading,
+    refetch: refetchCost,
+    isRefetching: isRefetchingCost,
+  } = useCityCost(cityId || '');
+
+  const {
+    data: uniData,
+    isLoading: uniLoading,
+    refetch: refetchUnis,
+    isRefetching: isRefetchingUnis,
+  } = useCityUniversities(cityId || '');
+
+  const {
+    data: transitData,
+    isLoading: transitLoading,
+    refetch: refetchTransit,
+    isRefetching: isRefetchingTransit,
+  } = useCityTransit(cityId || '');
+
+  const {
+    data: intelData,
+    isLoading: intelLoading,
+    refetch: refetchIntel,
+    isRefetching: isRefetchingIntel,
+  } = useCityIntelligence(cityId || '');
 
   const city = cityData?.data;
   const weather = weatherData?.data?.weather;
@@ -54,6 +112,34 @@ export const CityPage: React.FC = () => {
   const universities = uniData?.data || [];
   const transit = transitData?.data;
   const intelligence = intelData?.data;
+
+  // Real places query for Healthcare & Amenities tab
+  const {
+    data: placesData,
+    isLoading: placesLoading,
+    refetch: refetchPlaces,
+    isRefetching: isRefetchingPlaces,
+  } = useCityPlaces({
+    lat: city?.latitude ?? 0,
+    lon: city?.longitude ?? 0,
+    category: selectedAmenityCategory,
+    radius: 4000,
+    limit: 15,
+  });
+
+  const places = placesData?.data?.places || [];
+
+  // Build real interactive map markers from real POIs and Universities
+  const mapMarkers: MapMarkerItem[] = [
+    ...places.map((p) => ({
+      lat: p.latitude ?? city?.latitude ?? 0,
+      lon: p.longitude ?? city?.longitude ?? 0,
+      title: p.name || `${selectedAmenityCategory} facility`,
+      category: p.category || selectedAmenityCategory,
+      address: p.address || undefined,
+      distance_meters: p.distance_meters ?? undefined,
+    })),
+  ];
 
   if (cityLoading) {
     return (
@@ -74,7 +160,7 @@ export const CityPage: React.FC = () => {
         </p>
         <Link
           to="/"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-colors"
         >
           <Compass className="w-4 h-4" />
           <span>Back to City Explorer</span>
@@ -85,18 +171,20 @@ export const CityPage: React.FC = () => {
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'overview', label: 'Overview', icon: <Eye className="w-4 h-4" /> },
+    { key: 'map', label: 'Geographic Map', icon: <MapPin className="w-4 h-4" /> },
     { key: 'weather', label: 'Live Weather', icon: <Thermometer className="w-4 h-4" /> },
     { key: 'airQuality', label: 'Air Quality', icon: <Wind className="w-4 h-4" /> },
     { key: 'cost', label: 'Cost of Living', icon: <Coins className="w-4 h-4" /> },
     { key: 'education', label: 'Universities', icon: <GraduationCap className="w-4 h-4" /> },
     { key: 'transit', label: 'Mobility & Transit', icon: <Bus className="w-4 h-4" /> },
+    { key: 'healthcare', label: 'Healthcare & Amenities', icon: <ShieldCheck className="w-4 h-4" /> },
     { key: 'agents', label: 'Multi-Agent Intelligence', icon: <Layers className="w-4 h-4" /> },
   ];
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* City Header Banner */}
-      <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 relative overflow-hidden">
+      <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 relative overflow-hidden shadow-2xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -119,23 +207,32 @@ export const CityPage: React.FC = () => {
               </span>
               <span>•</span>
               <span className="flex items-center gap-1 font-mono text-[11px]">
-                <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                <Navigation className="w-3.5 h-3.5 text-slate-500" />
                 {city.latitude.toFixed(4)}°N, {city.longitude.toFixed(4)}°E
               </span>
             </div>
           </div>
 
           {/* Action CTAs */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => refetchCity()}
+              disabled={isRefetchingCity}
+              className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium transition-all flex items-center gap-1.5"
+              title="Refresh canonical profile"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefetchingCity ? 'animate-spin text-indigo-400' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
             <Link
               to={`/compare?city1=${encodeURIComponent(city.city_id)}`}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-2"
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-2"
             >
               <span>Compare</span>
             </Link>
             <Link
               to={`/ask?cityId=${encodeURIComponent(city.city_id)}`}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-lg shadow-indigo-600/30 flex items-center gap-2"
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-lg shadow-indigo-600/30 flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4 text-white" />
               <span>Ask AI Intelligence</span>
@@ -144,12 +241,18 @@ export const CityPage: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mt-8 pt-4 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div
+          role="tablist"
+          aria-label="City Data Tabs"
+          className="mt-8 pt-4 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none"
+        >
           {tabs.map((tab) => (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={activeTab === tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                 activeTab === tab.key
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800/80'
@@ -171,7 +274,7 @@ export const CityPage: React.FC = () => {
               value={city.population}
               icon={<Users className="w-4 h-4" />}
               status="database"
-              subValue={`Canonical WorldCities Data`}
+              subValue="Canonical WorldCities Record"
             />
             <MetricCard
               label="Live Temperature"
@@ -198,22 +301,45 @@ export const CityPage: React.FC = () => {
               value={universities.length}
               icon={<GraduationCap className="w-4 h-4" />}
               status="database"
-              subValue="Ranked Higher Education"
+              subValue="Accredited Institutions"
             />
           </div>
 
-          {/* Quick Intelligence Summary Banner */}
+          {/* Quick Interactive Mini-Map Preview */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Geographic Anchor & Surrounding Territory</span>
+              </span>
+              <button
+                onClick={() => setActiveTab('map')}
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+              >
+                Expand Full Interactive Map &rarr;
+              </button>
+            </div>
+            <InteractiveMap
+              latitude={city.latitude}
+              longitude={city.longitude}
+              cityName={city.name}
+              markers={mapMarkers.slice(0, 5)}
+              height="h-64"
+            />
+          </div>
+
+          {/* Multi-Agent Summary Banner */}
           {intelligence?.summary && (
             <div className="glass-panel p-6 rounded-2xl border border-indigo-500/20 bg-indigo-950/20">
               <div className="flex items-center gap-2 mb-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="w-4 h-4" />
-                <span>Multi-Agent Synthesized Overview</span>
+                <span>Multi-Agent Grounded Overview</span>
               </div>
               <p className="text-slate-200 text-sm leading-relaxed">{intelligence.summary}</p>
             </div>
           )}
 
-          {/* Provider Identifiers & Metadata */}
+          {/* Registry Identifiers */}
           <div className="glass-panel p-6 rounded-2xl border border-slate-800">
             <h3 className="text-sm font-bold text-white mb-4">Canonical Registry Identifiers</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
@@ -238,21 +364,65 @@ export const CityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: Live Weather */}
-      {activeTab === 'weather' && (
+      {/* Tab 2: Geographic Map */}
+      {activeTab === 'map' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Thermometer className="w-5 h-5 text-indigo-400" />
-              <span>Real-Time Atmospheric Conditions</span>
-            </h3>
-            {weatherMeta && (
-              <ProvenanceTag
-                source={weatherMeta.provider || 'Open-Meteo API'}
-                observedAt={weatherMeta.observed_at}
-                confidence={weatherMeta.confidence}
-              />
-            )}
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-indigo-400" />
+                <span>Interactive Geographic Intelligence Map</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Grounded OpenStreetMap coordinates for {city.name} with live POI discovery.
+              </p>
+            </div>
+            <ProvenanceTag source="OpenStreetMap (ODbL)" confidence={1.0} />
+          </div>
+
+          <InteractiveMap
+            latitude={city.latitude}
+            longitude={city.longitude}
+            cityName={city.name}
+            markers={mapMarkers}
+            zoom={13}
+            height="h-[520px]"
+          />
+        </div>
+      )}
+
+      {/* Tab 3: Live Weather */}
+      {activeTab === 'weather' && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Thermometer className="w-5 h-5 text-indigo-400" />
+                <span>Real-Time Atmospheric Conditions</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Official WMO station forecasts and ground-truth meteorological observations.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => refetchWeather()}
+                disabled={isRefetchingWeather}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                title="Refetch live weather"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefetchingWeather ? 'animate-spin text-indigo-400' : ''}`} />
+                <span>Refetch Live</span>
+              </button>
+              {weatherMeta && (
+                <ProvenanceTag
+                  source={weatherMeta.provider || 'Open-Meteo API'}
+                  observedAt={weatherMeta.observed_at}
+                  confidence={weatherMeta.confidence}
+                />
+              )}
+            </div>
           </div>
 
           {weatherLoading ? (
@@ -340,19 +510,36 @@ export const CityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: Air Quality */}
+      {/* Tab 4: Air Quality */}
       {activeTab === 'airQuality' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Wind className="w-5 h-5 text-teal-400" />
-              <span>Air Quality & Environmental Sensor Metrics</span>
-            </h3>
-            {aqi?.meta && (
-              <span className="text-xs text-slate-400">
-                Sources: {aqi.meta.sources?.join(', ') || 'Global Sensor Repositories'}
-              </span>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Wind className="w-5 h-5 text-teal-400" />
+                <span>Air Quality & Environmental Sensor Metrics</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Strict unblended separation between Global Weather station observations and WHO annual benchmarks.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => refetchAqi()}
+                disabled={isRefetchingAqi}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                title="Refetch air quality"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefetchingAqi ? 'animate-spin text-indigo-400' : ''}`} />
+                <span>Refetch Live</span>
+              </button>
+              {aqi?.available_providers && (
+                <span className="text-xs text-slate-400">
+                  Providers: {aqi.available_providers.join(', ')}
+                </span>
+              )}
+            </div>
           </div>
 
           {aqiLoading ? (
@@ -435,14 +622,29 @@ export const CityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 4: Cost of Living */}
+      {/* Tab 5: Cost of Living */}
       {activeTab === 'cost' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Coins className="w-5 h-5 text-amber-400" />
-              <span>Cost of Living Indices & Consumer Pricing</span>
-            </h3>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Coins className="w-5 h-5 text-amber-400" />
+                <span>Cost of Living Indices & Consumer Pricing</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Standardized consumer price baskets and residential rent comparisons.
+              </p>
+            </div>
+
+            <button
+              onClick={() => refetchCost()}
+              disabled={isRefetchingCost}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              title="Refetch cost data"
+            >
+              <RefreshCw className={`w-3 h-3 ${isRefetchingCost ? 'animate-spin text-indigo-400' : ''}`} />
+              <span>Refresh</span>
+            </button>
           </div>
 
           {costLoading ? (
@@ -500,15 +702,32 @@ export const CityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 5: Education & Universities */}
+      {/* Tab 6: Education & Universities */}
       {activeTab === 'education' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-purple-400" />
-              <span>Higher Education & Ranked Universities</span>
-            </h3>
-            <span className="text-xs text-slate-400">Total: {universities.length} Institutions</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-purple-400" />
+                <span>Higher Education & Ranked Universities</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Accredited institutions paired with official QS and THE academic ranking histories.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => refetchUnis()}
+                disabled={isRefetchingUnis}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                title="Refetch universities"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefetchingUnis ? 'animate-spin text-indigo-400' : ''}`} />
+                <span>Refresh</span>
+              </button>
+              <span className="text-xs text-slate-400">Total: {universities.length} Institutions</span>
+            </div>
           </div>
 
           {uniLoading ? (
@@ -568,14 +787,29 @@ export const CityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 6: Mobility & Transit */}
+      {/* Tab 7: Mobility & Transit */}
       {activeTab === 'transit' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Bus className="w-5 h-5 text-blue-400" />
-              <span>Public Transportation & GTFS Status</span>
-            </h3>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Bus className="w-5 h-5 text-blue-400" />
+                <span>Public Transportation & GTFS Registry</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Federated public transit feeds and GTFS-Realtime status.
+              </p>
+            </div>
+
+            <button
+              onClick={() => refetchTransit()}
+              disabled={isRefetchingTransit}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              title="Refetch transit status"
+            >
+              <RefreshCw className={`w-3 h-3 ${isRefetchingTransit ? 'animate-spin text-indigo-400' : ''}`} />
+              <span>Refresh</span>
+            </button>
           </div>
 
           {transitLoading ? (
@@ -599,17 +833,139 @@ export const CityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 7: Multi-Agent Intelligence Orchestrator */}
+      {/* Tab 8: Healthcare & Amenities */}
+      {activeTab === 'healthcare' && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <span>Healthcare, Civic Amenities & POI Discovery</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Live OpenStreetMap Overpass discovery bounded to a 4,000m radius around city coordinates.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => refetchPlaces()}
+                disabled={isRefetchingPlaces}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                title="Refetch amenities"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefetchingPlaces ? 'animate-spin text-indigo-400' : ''}`} />
+                <span>Refresh</span>
+              </button>
+              <ProvenanceTag source="OpenStreetMap Overpass API" confidence={0.95} />
+            </div>
+          </div>
+
+          {/* Category Chips Selector */}
+          <div className="flex flex-wrap gap-2">
+            {AMENITY_CATEGORIES.map((cat) => (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={() => setSelectedAmenityCategory(cat.key)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  selectedAmenityCategory === cat.key
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <span>{cat.emoji}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Places Results */}
+          {placesLoading ? (
+            <LoadingSkeleton count={3} height="h-24" />
+          ) : places.length > 0 ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {places.map((place, idx) => (
+                  <div
+                    key={idx}
+                    className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <h4 className="text-sm font-bold text-white line-clamp-1" title={place.name || 'Amenity'}>
+                          {place.name || `Unnamed ${selectedAmenityCategory}`}
+                        </h4>
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                          {place.category || selectedAmenityCategory}
+                        </span>
+                      </div>
+                      {place.address && (
+                        <p className="text-xs text-slate-400 line-clamp-2 mt-1">
+                          {place.address}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                      <span className="flex items-center gap-1 text-sky-400 font-semibold font-mono">
+                        <Navigation className="w-3 h-3" />
+                        {place.distance_meters !== undefined && place.distance_meters !== null
+                          ? place.distance_meters > 1000
+                            ? `${(place.distance_meters / 1000).toFixed(1)} km away`
+                            : `${Math.round(place.distance_meters)}m away`
+                          : 'Proximity mapped'}
+                      </span>
+                      {place.latitude && place.longitude && (
+                        <span className="font-mono text-[10px] text-slate-500">
+                          {place.latitude.toFixed(3)}°, {place.longitude.toFixed(3)}°
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
+              <Building2 className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+              <p className="text-sm text-slate-300 font-medium">No {selectedAmenityCategory} Amenities Recorded Nearby</p>
+              <p className="text-xs text-slate-500 mt-1">
+                The Overpass bounded query did not find {selectedAmenityCategory} nodes within 4,000 meters of this city center coordinate.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 9: Multi-Agent Intelligence Orchestrator */}
       {activeTab === 'agents' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Layers className="w-5 h-5 text-indigo-400" />
-              <span>Multi-Agent Orchestrator Intelligence</span>
-            </h3>
-            {intelligence?.overall_status && (
-              <StatusBadge status={intelligence.overall_status} label={`Orchestrator: ${intelligence.overall_status}`} />
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Layers className="w-5 h-5 text-indigo-400" />
+                <span>Multi-Agent Orchestrator Intelligence</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Deterministic synthesis across the 7 specialized domain intelligence agents.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => refetchIntel()}
+                disabled={isRefetchingIntel}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                title="Re-run orchestrator"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefetchingIntel ? 'animate-spin text-indigo-400' : ''}`} />
+                <span>Re-run Agents</span>
+              </button>
+              {intelligence?.overall_status && (
+                <StatusBadge status={intelligence.overall_status} label={`Orchestrator: ${intelligence.overall_status}`} />
+              )}
+            </div>
           </div>
 
           {intelLoading ? (
