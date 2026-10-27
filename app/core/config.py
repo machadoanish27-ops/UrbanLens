@@ -51,6 +51,15 @@ class Settings(BaseSettings):
     KNOWLEDGE_CHUNK_OVERLAP: int = 100
     KNOWLEDGE_DEFAULT_TOP_K: int = 5
 
+    # Groq LLM Intelligence Layer
+    LLM_PROVIDER: str = "groq"
+    LLM_MODEL: str = "openai/gpt-oss-120b"
+    LLM_TEMPERATURE: float = 0.2
+    LLM_MAX_TOKENS: int = 2000
+    LLM_TIMEOUT_SECONDS: float = 30.0
+    GROQ_API_KEY: str | None = None
+    LLM_CACHE_TTL_SECONDS: float = 300.0
+
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",
@@ -64,6 +73,45 @@ class Settings(BaseSettings):
             return ""
         # Redact password in mongodb:// or mongodb+srv://
         return re.sub(r":([^@]+)@", ":***@", self.MONGODB_URI)
+
+    # Lowercase property accessors for LLM settings
+    @property
+    def groq_api_key(self) -> str | None:
+        return self.GROQ_API_KEY
+
+    @property
+    def llm_provider(self) -> str:
+        return self.LLM_PROVIDER
+
+    @property
+    def llm_model(self) -> str:
+        return self.LLM_MODEL
+
+    @property
+    def llm_temperature(self) -> float:
+        return self.LLM_TEMPERATURE
+
+    @property
+    def llm_max_tokens(self) -> int:
+        return self.LLM_MAX_TOKENS
+
+    @property
+    def llm_timeout_seconds(self) -> float:
+        return self.LLM_TIMEOUT_SECONDS
+
+    @property
+    def llm_cache_ttl_seconds(self) -> float:
+        return self.LLM_CACHE_TTL_SECONDS
+
+    @property
+    def safe_groq_api_key(self) -> str:
+        """Return redacted representation of Groq API key for logging."""
+        if not self.GROQ_API_KEY:
+            return "not_configured"
+        key = self.GROQ_API_KEY.strip()
+        if len(key) <= 8:
+            return "***"
+        return f"{key[:4]}...{key[-4:]}"
 
 
 settings = Settings()

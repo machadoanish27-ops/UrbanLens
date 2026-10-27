@@ -10,6 +10,7 @@ from app.services.geocoding import GeocodingService
 from app.services.intelligence import IntelligenceService
 from app.services.knowledge import KnowledgeService
 from app.services.knowledge_ingestion import KnowledgeIngestionService
+from app.services.llm import LLMService
 from app.services.orchestrator import AgentOrchestrator
 from app.services.places import PlacesService
 from app.services.routing import RoutingService
@@ -32,6 +33,7 @@ __all__ = [
     "IntelligenceService",
     "KnowledgeService",
     "KnowledgeIngestionService",
+    "LLMService",
     "AgentOrchestrator",
     "freshness_status",
 ]

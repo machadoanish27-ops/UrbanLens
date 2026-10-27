@@ -21,7 +21,9 @@ from app.models.agent import AgentRequest, AgentResult, AgentStatus, SourceProve
 from app.models.knowledge import KnowledgeEvidence
 from app.orchestrator.context import OrchestrationContext
 from app.orchestrator.result import AggregatedIntelligence
+from app.schemas.llm import LLMAskResponse
 from app.services.knowledge import KnowledgeService
+from app.services.llm import LLMService
 
 
 class UrbanLensOrchestrator:
@@ -32,6 +34,7 @@ class UrbanLensOrchestrator:
         database: Database | None = None,
         agents: dict[str, BaseAgent] | None = None,
         knowledge_service: KnowledgeService | None = None,
+        llm_service: LLMService | None = None,
     ) -> None:
         self.database = database
         self.city_repo = CityRepository(database) if database is not None else None
@@ -39,6 +42,7 @@ class UrbanLensOrchestrator:
         self.knowledge_service = knowledge_service or (
             KnowledgeService(self.knowledge_repo) if self.knowledge_repo is not None else None
         )
+        self.llm_service = llm_service or LLMService()
         if agents is not None:
             self._agents = agents
         elif database is not None:
@@ -521,3 +525,30 @@ class UrbanLensOrchestrator:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 return pool.submit(asyncio.run, self.synthesize_async(context)).result()
         return asyncio.run(self.synthesize_async(context))
+
+    async def ask_async(
+        self,
+        query: str,
+        city_id: str | None = None,
+    ) -> LLMAskResponse:
+        """Execute multi-agent intelligence retrieval and synthesize grounded response via LLM reasoning."""
+        context = OrchestrationContext(city_id=city_id, query=query)
+        aggregated = await self.synthesize_async(context)
+        return await self.llm_service.synthesize_grounded_answer(aggregated, query)
+
+    def ask(
+        self,
+        query: str,
+        city_id: str | None = None,
+    ) -> LLMAskResponse:
+        """Synchronously execute multi-agent retrieval and synthesize grounded response via LLM reasoning."""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, self.ask_async(query, city_id=city_id)).result()
+        return asyncio.run(self.ask_async(query, city_id=city_id))
+

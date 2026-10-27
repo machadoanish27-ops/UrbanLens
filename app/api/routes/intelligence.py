@@ -13,6 +13,7 @@ from app.schemas.intelligence import (
     SourceProvenanceSchema,
 )
 from app.schemas.knowledge import KnowledgeEvidenceSchema
+from app.schemas.llm import LLMAskRequest, LLMAskResponse
 from app.services.intelligence import IntelligenceService
 
 router = APIRouter(tags=["Intelligence & Agents"])
@@ -150,3 +151,22 @@ async def get_city_intelligence(
         ),
         meta=ResponseMeta(source="urbanlens_orchestrator"),
     )
+
+
+@router.post(
+    "/intelligence/ask",
+    response_model=ApiResponse[LLMAskResponse],
+    summary="Ask natural language question grounded in multi-agent intelligence and RAG evidence",
+)
+async def ask_intelligence(
+    request: LLMAskRequest,
+    database: Database = Depends(get_db),
+) -> ApiResponse[LLMAskResponse]:
+    """Execute multi-agent retrieval and synthesize grounded response via LLM reasoning."""
+    service = IntelligenceService(database)
+    response = await service.ask_async(query=request.query, city_id=request.city_id)
+    return ApiResponse(
+        data=response,
+        meta=ResponseMeta(source="urbanlens_groq_llm"),
+    )
+

@@ -145,3 +145,20 @@ class IntelligenceService:
         )
         aggregated = self.orchestrator.synthesize(context)
         return self._serialize_aggregated(aggregated)
+
+    async def ask_async(
+        self,
+        query: str,
+        city_id: str | None = None,
+    ) -> Any:
+        """Execute multi-agent retrieval and synthesize grounded response via LLM reasoning."""
+        return await self.orchestrator.ask_async(query=query, city_id=city_id)
+
+    def ask(
+        self,
+        query: str,
+        city_id: str | None = None,
+    ) -> Any:
+        """Synchronously execute multi-agent retrieval and synthesize grounded response via LLM reasoning."""
+        return self.orchestrator.ask(query=query, city_id=city_id)
+
