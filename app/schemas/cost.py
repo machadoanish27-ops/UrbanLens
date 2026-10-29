@@ -20,5 +20,8 @@ class CityCostOfLivingResponse(BaseModel):
 
     city_id: str
     is_available: bool = True
+    status: str = "available"
     metric_count: int = 0
     metrics: list[CostOfLivingMetricItem] = Field(default_factory=list)
+    source: str | None = None
+    warning: str | None = None

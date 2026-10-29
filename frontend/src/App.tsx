@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RootLayout } from './layouts/RootLayout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { OriginDestinationProvider } from './context/OriginDestinationContext';
+import { OriginSelectorModal } from './components/OriginSelectorModal';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
 const CityPage = lazy(() => import('./pages/CityPage').then((m) => ({ default: m.CityPage })));
@@ -34,52 +36,55 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<RootLayout />}>
-              <Route
-                index
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <HomePage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="city/:cityId"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <CityPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="ask"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <AskPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="compare"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <ComparePage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="*"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <NotFoundPage />
-                  </Suspense>
-                }
-              />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <OriginDestinationProvider>
+          <BrowserRouter>
+            <OriginSelectorModal />
+            <Routes>
+              <Route path="/" element={<RootLayout />}>
+                <Route
+                  index
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <HomePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="city/:cityId"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <CityPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="ask"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AskPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="compare"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ComparePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <NotFoundPage />
+                    </Suspense>
+                  }
+                />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </OriginDestinationProvider>
       </ErrorBoundary>
     </QueryClientProvider>
   );

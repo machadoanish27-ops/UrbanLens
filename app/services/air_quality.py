@@ -91,6 +91,9 @@ class AirQualityService:
         )
 
         if res.is_successful and res.data:
+            res.data.provider = "OpenAQ"
+            res.data.status = "live"
+            res.data.is_live = True
             result = {
                 "city_id": city_id,
                 "city_name": city.get("name"),
@@ -109,7 +112,7 @@ class AirQualityService:
             city_name=city.get("name"),
             latitude=float(latitude),
             longitude=float(longitude),
-            reason=res.meta.error_detail or "Live air quality provider returned error status.",
+            reason=res.meta.error_detail if res and res.meta else "Live air quality provider returned error status.",
         )
 
     def _build_database_fallback(
@@ -143,9 +146,13 @@ class AirQualityService:
                 observed_at=str(obs_dt) if obs_dt else None,
                 pollutants=pollutants,
                 available_pollutants=available,
+                provider="GlobalWeather",
+                status="database",
+                warning="Live OpenAQ reading unavailable. Displaying Global Weather historical database observation.",
+                is_live=False,
             )
             meta = LiveMetadata(
-                provider="mongodb",
+                provider="GlobalWeather",
                 source="MongoDB air_quality_observations_global_weather ground-truth fallback",
                 status=LiveStatus.DATABASE,
                 observed_at=str(obs_dt) if obs_dt else None,
@@ -174,14 +181,18 @@ class AirQualityService:
             normalized = NormalizedAirQuality(
                 latitude=latitude,
                 longitude=longitude,
-                location_name=f"WHO Annual Urban AQ ({year_val})",
+                location_name=f"WHO Annual Urban Observation ({year_val})",
                 observed_at=str(year_val) if year_val else None,
                 pollutants=pollutants,
                 available_pollutants=available,
+                provider="WHO",
+                status="database",
+                warning="Live OpenAQ reading unavailable. Displaying WHO annual ground-truth observation (Not live).",
+                is_live=False,
             )
             meta = LiveMetadata(
-                provider="mongodb",
-                source="MongoDB air_quality_observations_who annual fallback",
+                provider="WHO",
+                source="WHO Annual Urban Air Quality Monitoring Database",
                 status=LiveStatus.DATABASE,
                 observed_at=str(year_val) if year_val else None,
                 error_detail=f"Live provider fallback: {reason}",

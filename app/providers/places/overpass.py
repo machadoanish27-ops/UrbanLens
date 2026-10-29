@@ -17,6 +17,8 @@ logger = get_logger("providers.places.overpass")
 ALLOWED_CATEGORIES: frozenset[str] = frozenset({
     "hospital",
     "clinic",
+    "dentist",
+    "doctors",
     "pharmacy",
     "school",
     "university",
@@ -180,7 +182,10 @@ out center {clamped_limit};"""
                         longitude=lon_f,
                         distance_meters=dist_m,
                         amenity=tags.get("amenity", clean_cat),
-                        tags={k: str(v) for k, v in tags.items() if k in {"brand", "operator", "opening_hours", "wheelchair", "website", "phone"}},
+                        tags={k: str(v) for k, v in tags.items() if k in {
+                            "brand", "operator", "opening_hours", "wheelchair", "website", "phone",
+                            "contact:website", "contact:phone", "emergency", "addr:street", "addr:city", "addr:housenumber"
+                        }},
                     )
                 )
 

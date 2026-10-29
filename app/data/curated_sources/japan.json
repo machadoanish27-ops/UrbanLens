@@ -1,0 +1,65 @@
+[
+  {
+    "title": "Immigration Services Agency of Japan (ISA) Certificate of Eligibility and Status of Residence",
+    "source": "Immigration Services Agency of Japan, Ministry of Justice",
+    "publisher": "Ministry of Justice, Government of Japan",
+    "source_url": "https://www.moj.go.jp/isa/",
+    "canonical_url": "https://www.moj.go.jp/isa/",
+    "authority_tier": "tier_1_official",
+    "authority_score": 1.0,
+    "scope": "country",
+    "country_id": "japan",
+    "category": "immigration",
+    "subcategory": "visa",
+    "freshness_policy": "high_90d",
+    "content": "Foreign nationals seeking to relocate to Japan for employment, study, or long-term residence must obtain a Certificate of Eligibility (CoE) before applying for an entry visa at a Japanese embassy or consulate abroad.\n\nThe CoE is issued by regional immigration bureaus across Japan upon petition by a sponsoring employer, university, or legal guarantor. Common work visa categories include Engineer/Specialist in Humanities/International Services, Highly Skilled Professional, Intra-Company Transferee, and Specified Skilled Worker.\n\nUpon arrival at major international airports (such as Haneda, Narita, or Kansai), medium-to-long-term residents receive a Residence Card (Zairyu Card). Within 14 days of securing a permanent residence, cardholders must register their address at the local municipal or ward office."
+  },
+  {
+    "title": "Ministry of Health, Labour and Welfare (MHLW) National Health Insurance (NHI) System",
+    "source": "Ministry of Health, Labour and Welfare (MHLW)",
+    "publisher": "Ministry of Health, Labour and Welfare, Government of Japan",
+    "source_url": "https://www.mhlw.go.jp/",
+    "canonical_url": "https://www.mhlw.go.jp/",
+    "authority_tier": "tier_1_official",
+    "authority_score": 1.0,
+    "scope": "country",
+    "country_id": "japan",
+    "category": "healthcare",
+    "subcategory": "insurance",
+    "freshness_policy": "high_90d",
+    "content": "Japan maintains a universal healthcare coverage system (Kokumin Kaihoken). All residents, including foreign nationals staying in Japan for more than three months, are legally mandated to enroll in public health insurance.\n\nEmployees of Japanese companies are generally enrolled in Employees' Health Insurance (Shakai Hoken) sponsored jointly by employer and employee. Self-employed individuals, students, and freelancers enroll in National Health Insurance (Kokumin Kenko Hoken) administered by municipal ward offices.\n\nUnder both systems, patients pay a co-payment of 30% of total medical costs at clinics and hospitals, while the insurance covers the remaining 70%. The High-Cost Medical Expense Benefit caps patient out-of-pocket expenses monthly based on taxable income tiers."
+  },
+  {
+    "title": "Tokyo Metropolitan Government (TMG) Resident Registration and My Number Procedures",
+    "source": "Tokyo Metropolitan Government (TMG)",
+    "publisher": "Tokyo Metropolitan Government",
+    "source_url": "https://www.metro.tokyo.lg.jp/english/",
+    "canonical_url": "https://www.metro.tokyo.lg.jp/english/",
+    "authority_tier": "tier_1_official",
+    "authority_score": 1.0,
+    "scope": "city",
+    "city_id": "city_1392685764",
+    "country_id": "japan",
+    "category": "government",
+    "subcategory": "registration",
+    "freshness_policy": "moderate_180d",
+    "content": "Foreign residents moving into Tokyo must visit their local special ward office (ku-yakusho) or municipal city office (shi-yakusho) within 14 days of establishing an address to complete the moving-in notification (Tennyu-todoke).\n\nThe ward office records the address onto the back of the Residence Card and enters the resident into the Basic Resident Ledger (Juminhyo). A copy of the Juminhyo is required for opening bank accounts, mobile contracts, and rental leases.\n\nResidents also receive a 12-digit Individual Number (My Number). Residents can apply for a plastic My Number Card equipped with an IC chip, which enables digital verification, official certificate printing at convenience stores, and online administrative tax filing."
+  },
+  {
+    "title": "Tokyo Metropolitan Government Disaster Prevention and Earthquake Preparedness (Bosai Portal)",
+    "source": "Tokyo Metropolitan Government Disaster Prevention Division",
+    "publisher": "Tokyo Metropolitan Government",
+    "source_url": "https://www.bousai.metro.tokyo.lg.jp/en/",
+    "canonical_url": "https://www.bousai.metro.tokyo.lg.jp/en/",
+    "authority_tier": "tier_1_official",
+    "authority_score": 1.0,
+    "scope": "city",
+    "city_id": "city_1392685764",
+    "country_id": "japan",
+    "category": "safety",
+    "subcategory": "disaster_preparedness",
+    "freshness_policy": "moderate_180d",
+    "content": "Tokyo is situated in a seismically active zone, and the Tokyo Metropolitan Government provides comprehensive disaster preparedness protocols through its official Disaster Prevention Portal.\n\nEmergency hotlines in Japan are 110 for Police and 119 for Fire and Ambulance services (both support multilingual interpretation). In the event of a major earthquake, residents are advised to protect themselves under sturdy furniture, turn off gas valves once shaking subsides, and evacuate to designated regional evacuation areas (Kouiki Hinanbasho) if fire hazards arise.\n\nResidents are advised to maintain emergency survival kits containing at least three days of non-perishable food, water (3 liters per person per day), flashlights, portable batteries, and personal medical documentation."
+  }
+]
+

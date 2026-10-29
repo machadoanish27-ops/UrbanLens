@@ -5,7 +5,13 @@ from pymongo.database import Database
 
 from app.db.client import get_db
 from app.schemas.common import ApiResponse, PaginationMeta, ResponseMeta
-from app.schemas.country import CountryItem, CountryMetricItem, CountryMetricsResponse
+from app.schemas.country import (
+    CountryDetail,
+    CountryItem,
+    CountryLanguageInfo,
+    CountryMetricItem,
+    CountryMetricsResponse,
+)
 from app.services.country import CountryService
 
 router = APIRouter(prefix="/countries", tags=["Countries"])
@@ -28,17 +34,31 @@ def list_countries(
     )
 
 
-@router.get("/{country_id}", response_model=ApiResponse[CountryItem], summary="Get country details")
+@router.get("/{country_id}", response_model=ApiResponse[CountryDetail], summary="Get country details")
 def get_country(
     country_id: str,
     database: Database = Depends(get_db),
-) -> ApiResponse[CountryItem]:
+) -> ApiResponse[CountryDetail]:
     """Retrieve single country details by country_id or ISO code."""
     service = CountryService(database)
     country = service.get_country(country_id)
     return ApiResponse(
-        data=CountryItem(**country),
+        data=CountryDetail(**country),
         meta=ResponseMeta(source="countries_collection"),
+    )
+
+
+@router.get("/{country_id}/languages", response_model=ApiResponse[CountryLanguageInfo], summary="Get country authoritative language data")
+def get_country_languages(
+    country_id: str,
+    database: Database = Depends(get_db),
+) -> ApiResponse[CountryLanguageInfo]:
+    """Retrieve authoritative spoken and official languages with provenance."""
+    service = CountryService(database)
+    languages = service.get_country_languages(country_id)
+    return ApiResponse(
+        data=CountryLanguageInfo(**languages),
+        meta=ResponseMeta(source=languages.get("source") or "un_iso_languages"),
     )
 
 

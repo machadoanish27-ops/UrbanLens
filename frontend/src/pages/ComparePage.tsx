@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Columns2,
@@ -19,28 +19,31 @@ import {
   useCities,
   useCity,
   useCityWeather,
-  useCityAirQuality,
+  useCityAirQualityLive,
   useCityCost,
   useCityUniversities,
   useCityTransit,
   useCityPlaces,
   useCityIntelligence,
+  useCurrencyConversion,
 } from '../hooks/useUrbanLens';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 
 const COMPARISON_PRESETS = [
-  { c1: 'city_1392685764', c2: 'city_1826645935', label: 'Tokyo vs London' },
-  { c1: 'city_1356226629', c2: 'city_1840034016', label: 'Mumbai vs New York' },
-  { c1: 'city_1250015082', c2: 'city_1276451290', label: 'Paris vs Berlin' },
+  { c1: 'city_1356226629', c2: 'city_1392685764', label: 'Mumbai vs Tokyo' },
+  { c1: 'city_1356226629', c2: 'city_1826645935', label: 'Mumbai vs London' },
+  { c1: 'city_1356226629', c2: 'city_1702341000', label: 'Mumbai vs Singapore' },
+  { c1: 'city_1356060597', c2: 'city_1392685764', label: 'Kolkata vs Tokyo' },
+  { c1: 'city_1356872604', c2: 'city_1784521698', label: 'Delhi vs Dubai' },
 ];
 
 export const ComparePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const city1Id = searchParams.get('city1') || 'city_1392685764';
-  const city2Id = searchParams.get('city2') || 'city_1826645935';
+  const city1Id = searchParams.get('city1') || 'city_1356226629'; // Default Mumbai
+  const city2Id = searchParams.get('city2') || 'city_1392685764'; // Default Tokyo
 
   const [selected1, setSelected1] = useState(city1Id);
   const [selected2, setSelected2] = useState(city2Id);
@@ -51,7 +54,7 @@ export const ComparePage: React.FC = () => {
   // City 1 data queries
   const { data: c1Detail, isLoading: c1Loading } = useCity(selected1);
   const { data: c1Weather } = useCityWeather(selected1);
-  const { data: c1Aqi } = useCityAirQuality(selected1);
+  const { data: c1AqiLive } = useCityAirQualityLive(selected1);
   const { data: c1Cost } = useCityCost(selected1);
   const { data: c1Unis } = useCityUniversities(selected1);
   const { data: c1Transit } = useCityTransit(selected1);
@@ -67,7 +70,7 @@ export const ComparePage: React.FC = () => {
   // City 2 data queries
   const { data: c2Detail, isLoading: c2Loading } = useCity(selected2);
   const { data: c2Weather } = useCityWeather(selected2);
-  const { data: c2Aqi } = useCityAirQuality(selected2);
+  const { data: c2AqiLive } = useCityAirQualityLive(selected2);
   const { data: c2Cost } = useCityCost(selected2);
   const { data: c2Unis } = useCityUniversities(selected2);
   const { data: c2Transit } = useCityTransit(selected2);
@@ -79,6 +82,27 @@ export const ComparePage: React.FC = () => {
     radius: 4000,
     limit: 10,
   });
+
+  const c1 = c1Detail?.data;
+  const c2 = c2Detail?.data;
+
+  const c1Aqi = c1AqiLive?.data?.air_quality;
+  const c2Aqi = c2AqiLive?.data?.air_quality;
+
+  // Currencies
+  const c1Curr = c1?.currency?.code || 'INR';
+  const c2Curr = c2?.currency?.code || 'JPY';
+
+  // Live Currency Conversion between City 1 and City 2
+  const { data: fxData } = useCurrencyConversion(c1Curr, c2Curr, 1.0);
+  const fx = fxData?.data;
+
+  // 100,000 budget translations
+  const { data: budgetData } = useCurrencyConversion(c1Curr, c2Curr, 100000.0);
+  const budgetFx = budgetData?.data;
+
+  const { data: inverseBudgetData } = useCurrencyConversion(c2Curr, c1Curr, 100000.0);
+  const inverseBudgetFx = inverseBudgetData?.data;
 
   const handleCity1Change = (id: string) => {
     setSelected1(id);
@@ -106,12 +130,15 @@ export const ComparePage: React.FC = () => {
   const handleAskAiToCompare = () => {
     const c1Name = c1Detail?.data?.name || selected1;
     const c2Name = c2Detail?.data?.name || selected2;
-    const prompt = `Compare ${c1Name} and ${c2Name} in terms of live weather, air quality, cost of living, transit, healthcare, and universities. Which is better suited for relocation and career opportunities?`;
+    const prompt = `Compare ${c1Name} (${c1Curr}) and ${c2Name} (${c2Curr}) in terms of currency rates, cost of living difference, live air quality, weather, universities, and healthcare. Keep currency rate strictly distinct from cost of living.`;
     navigate(`/ask?q=${encodeURIComponent(prompt)}&cityId=${selected1}`);
   };
 
-  const c1 = c1Detail?.data;
-  const c2 = c2Detail?.data;
+  // Cost of Living comparison calculation
+  const c1Cpi = c1Cost?.data?.summary?.consumer_price_index;
+  const c2Cpi = c2Cost?.data?.summary?.consumer_price_index;
+  const bothCostAvailable = c1Cpi != null && c2Cpi != null;
+  const oneCostAvailable = (c1Cpi != null && c2Cpi == null) || (c1Cpi == null && c2Cpi != null);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -125,7 +152,7 @@ export const ComparePage: React.FC = () => {
           Compare Global Cities
         </h1>
         <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
-          Compare real demographics, live weather, air quality sensors, universities, and cost indices head-to-head without fabricated scoring.
+          Compare demographics, live weather, real sensor air quality, currency translation, and cost indices head-to-head without fabricated scoring.
         </p>
 
         {/* Quick Presets */}
@@ -149,7 +176,7 @@ export const ComparePage: React.FC = () => {
         {/* City 1 Selector */}
         <div className="flex-1 w-full">
           <label htmlFor="city1-select" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-            City Benchmark A
+            Origin City (A)
           </label>
           <select
             id="city1-select"
@@ -182,7 +209,7 @@ export const ComparePage: React.FC = () => {
         {/* City 2 Selector */}
         <div className="flex-1 w-full">
           <label htmlFor="city2-select" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-            City Benchmark B
+            Destination City (B)
           </label>
           <select
             id="city2-select"
@@ -201,6 +228,145 @@ export const ComparePage: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {/* Origin -> Destination Currency & Relocation Translation Section */}
+      {c1 && c2 && (
+        <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 bg-gradient-to-r from-indigo-950/20 via-slate-900/60 to-slate-900/40 space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                  Currency & Relocation Translation
+                </span>
+                {fx && (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      fx.status === 'live' || fx.status === 'fresh'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : fx.status === 'cached'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}
+                  >
+                    {fx.status === 'fresh' ? 'LIVE' : fx.status.toUpperCase()} • {fx.provider}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-lg font-black text-white">
+                {c1.name} ({c1Curr}) &rarr; {c2.name} ({c2Curr})
+              </h3>
+            </div>
+
+            <div className="text-right text-xs">
+              {fx?.rate ? (
+                <>
+                  <div className="font-mono font-bold text-base text-white">
+                    1 {c1Curr} = <span className="text-emerald-400">{fx.rate.toFixed(4)}</span> {c2Curr}
+                  </div>
+                  <div className="text-slate-400 text-[11px] mt-0.5">
+                    1 {c2Curr} = <span className="font-mono">{fx.inverse_rate != null ? fx.inverse_rate.toFixed(4) : '—'}</span> {c1Curr}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Updated: {fx.observed_at || (fx.fetched_at ? new Date(fx.fetched_at).toLocaleTimeString() : 'Recent')}
+                  </div>
+                </>
+              ) : (
+                <span className="text-slate-500">Live FX Unavailable</span>
+              )}
+            </div>
+          </div>
+
+          {/* Budget Translation & USD Benchmarks */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Budget Translation */}
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Example Budget Translation
+              </h4>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-slate-950 border border-slate-800/80">
+                  <span className="text-slate-400">
+                    {c1.currency?.symbol || ''}100,000 {c1Curr}
+                  </span>
+                  <span className="font-mono font-bold text-emerald-400">
+                    ≈ {c2.currency?.symbol || ''}
+                    {budgetFx?.converted_amount
+                      ? Math.round(budgetFx.converted_amount).toLocaleString()
+                      : '—'}{' '}
+                    {c2Curr}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-slate-950 border border-slate-800/80">
+                  <span className="text-slate-400">
+                    {c2.currency?.symbol || ''}100,000 {c2Curr}
+                  </span>
+                  <span className="font-mono font-bold text-emerald-400">
+                    ≈ {c1.currency?.symbol || ''}
+                    {inverseBudgetFx?.converted_amount
+                      ? Math.round(inverseBudgetFx.converted_amount).toLocaleString()
+                      : '—'}{' '}
+                    {c1Curr}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* USD Benchmark */}
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                USD Benchmark (Relative Currency Strength)
+              </h4>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-slate-950 border border-slate-800/80">
+                  <span className="text-slate-400">{c1.name} ({c1Curr})</span>
+                  <span className="font-mono font-bold text-cyan-400">
+                    {fx?.usd_benchmark_base?.rate_to_usd != null ? `1 ${c1Curr} = $${fx.usd_benchmark_base.rate_to_usd.toFixed(4)} USD` : 'Unavailable'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-slate-950 border border-slate-800/80">
+                  <span className="text-slate-400">{c2.name} ({c2Curr})</span>
+                  <span className="font-mono font-bold text-cyan-400">
+                    {fx?.usd_benchmark_quote?.rate_to_usd != null ? `1 ${c2Curr} = $${fx.usd_benchmark_quote.rate_to_usd.toFixed(4)} USD` : 'Unavailable'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Cost of Living Distinction */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-300">Cost-of-Living Baseline Comparison</span>
+              <span className="text-[11px] text-slate-500">Distinct from currency FX</span>
+            </div>
+
+            {bothCostAvailable && c1Cpi != null && c2Cpi != null ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex justify-between">
+                  <span className="text-slate-400">CPI Difference ({c1.name} vs {c2.name}):</span>
+                  <span className="font-mono font-bold text-amber-400">
+                    {c1Cpi} vs {c2Cpi} ({Number(c2Cpi) > Number(c1Cpi) ? `+${((Number(c2Cpi) - Number(c1Cpi)) / Number(c1Cpi) * 100).toFixed(1)}%` : `${((Number(c2Cpi) - Number(c1Cpi)) / Number(c1Cpi) * 100).toFixed(1)}%`})
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex justify-between">
+                  <span className="text-slate-400">Rent Index:</span>
+                  <span className="font-mono font-bold text-amber-400">
+                    {c1Cost?.data?.summary?.rent_index ?? '—'} vs {c2Cost?.data?.summary?.rent_index ?? '—'}
+                  </span>
+                </div>
+              </div>
+            ) : oneCostAvailable ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                Cost comparison unavailable — verified data exists for only one city.
+              </div>
+            ) : (
+              <div className="text-slate-500 italic">
+                Cost comparison unavailable — neither city has recorded Numbeo consumer basket baselines.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Ask AI to Compare Callout */}
       <div className="p-5 rounded-2xl glass-panel border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 bg-indigo-950/20">
@@ -242,7 +408,9 @@ export const ComparePage: React.FC = () => {
               <>
                 <div>
                   <h2 className="text-2xl font-bold text-white">{c1.name}</h2>
-                  <p className="text-xs text-slate-400">{c1.country_id} ({c1.country_iso2})</p>
+                  <p className="text-xs text-slate-400">
+                    {c1.country_id} ({c1.country_iso2}) • Currency: {c1Curr} ({c1.currency?.symbol || ''})
+                  </p>
                 </div>
 
                 <div className="space-y-3 text-xs divide-y divide-slate-800/80">
@@ -281,27 +449,23 @@ export const ComparePage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-2.5">
-                    <span className="text-slate-400">Condition & Humidity</span>
-                    <span className="text-slate-300">
-                      {c1Weather?.data?.weather?.current?.condition || '—'}
-                      {c1Weather?.data?.weather?.current?.relative_humidity_pct !== undefined &&
-                        ` (${c1Weather.data.weather.current.relative_humidity_pct}%)`}
-                    </span>
-                  </div>
-
                   {/* Air Quality */}
                   <div className="flex items-center justify-between py-2.5">
                     <span className="text-slate-400 flex items-center gap-1.5">
                       <Wind className="w-3.5 h-3.5 text-teal-400" />
-                      <span>PM2.5 Air Quality</span>
+                      <span>Air Quality (PM2.5)</span>
                     </span>
                     <span className="text-teal-400 font-semibold font-mono">
-                      {c1Aqi?.data?.global_weather?.[0]?.pm25 !== undefined
-                        ? `${c1Aqi.data.global_weather[0].pm25} µg/m³ (Live)`
-                        : (c1Aqi?.data?.who_annual?.[0]?.pm25_annual_mean_ug_m3 ?? c1Aqi?.data?.who_annual?.[0]?.pm25_annual_mean) !== undefined
-                        ? `${c1Aqi?.data?.who_annual?.[0]?.pm25_annual_mean_ug_m3 ?? c1Aqi?.data?.who_annual?.[0]?.pm25_annual_mean} µg/m³ (WHO)`
-                        : <span className="text-slate-500 italic">Not Available</span>}
+                      {c1Aqi?.pollutants?.pm25 !== undefined && c1Aqi.pollutants.pm25 !== null ? (
+                        <>
+                          {c1Aqi.pollutants.pm25} µg/m³{' '}
+                          <span className="text-[10px] text-slate-400">
+                            ({(c1Aqi.status || 'data').toUpperCase()})
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-slate-500 italic">Not Available</span>
+                      )}
                     </span>
                   </div>
 
@@ -313,13 +477,6 @@ export const ComparePage: React.FC = () => {
                     </span>
                     <span className="text-amber-400 font-semibold font-mono">
                       {c1Cost?.data?.summary?.consumer_price_index ?? 'Not Indexed'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2.5">
-                    <span className="text-slate-400">Rent Index</span>
-                    <span className="text-amber-300 font-mono">
-                      {c1Cost?.data?.summary?.rent_index ?? 'Not Indexed'}
                     </span>
                   </div>
 
@@ -390,7 +547,9 @@ export const ComparePage: React.FC = () => {
               <>
                 <div>
                   <h2 className="text-2xl font-bold text-white">{c2.name}</h2>
-                  <p className="text-xs text-slate-400">{c2.country_id} ({c2.country_iso2})</p>
+                  <p className="text-xs text-slate-400">
+                    {c2.country_id} ({c2.country_iso2}) • Currency: {c2Curr} ({c2.currency?.symbol || ''})
+                  </p>
                 </div>
 
                 <div className="space-y-3 text-xs divide-y divide-slate-800/80">
@@ -429,27 +588,23 @@ export const ComparePage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-2.5">
-                    <span className="text-slate-400">Condition & Humidity</span>
-                    <span className="text-slate-300">
-                      {c2Weather?.data?.weather?.current?.condition || '—'}
-                      {c2Weather?.data?.weather?.current?.relative_humidity_pct !== undefined &&
-                        ` (${c2Weather.data.weather.current.relative_humidity_pct}%)`}
-                    </span>
-                  </div>
-
                   {/* Air Quality */}
                   <div className="flex items-center justify-between py-2.5">
                     <span className="text-slate-400 flex items-center gap-1.5">
                       <Wind className="w-3.5 h-3.5 text-teal-400" />
-                      <span>PM2.5 Air Quality</span>
+                      <span>Air Quality (PM2.5)</span>
                     </span>
                     <span className="text-teal-400 font-semibold font-mono">
-                      {c2Aqi?.data?.global_weather?.[0]?.pm25 !== undefined
-                        ? `${c2Aqi.data.global_weather[0].pm25} µg/m³ (Live)`
-                        : (c2Aqi?.data?.who_annual?.[0]?.pm25_annual_mean_ug_m3 ?? c2Aqi?.data?.who_annual?.[0]?.pm25_annual_mean) !== undefined
-                        ? `${c2Aqi?.data?.who_annual?.[0]?.pm25_annual_mean_ug_m3 ?? c2Aqi?.data?.who_annual?.[0]?.pm25_annual_mean} µg/m³ (WHO)`
-                        : <span className="text-slate-500 italic">Not Available</span>}
+                      {c2Aqi?.pollutants?.pm25 !== undefined && c2Aqi.pollutants.pm25 !== null ? (
+                        <>
+                          {c2Aqi.pollutants.pm25} µg/m³{' '}
+                          <span className="text-[10px] text-slate-400">
+                            ({(c2Aqi.status || 'data').toUpperCase()})
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-slate-500 italic">Not Available</span>
+                      )}
                     </span>
                   </div>
 
@@ -461,13 +616,6 @@ export const ComparePage: React.FC = () => {
                     </span>
                     <span className="text-amber-400 font-semibold font-mono">
                       {c2Cost?.data?.summary?.consumer_price_index ?? 'Not Indexed'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2.5">
-                    <span className="text-slate-400">Rent Index</span>
-                    <span className="text-amber-300 font-mono">
-                      {c2Cost?.data?.summary?.rent_index ?? 'Not Indexed'}
                     </span>
                   </div>
 

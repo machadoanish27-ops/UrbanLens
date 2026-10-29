@@ -28,6 +28,10 @@ class NormalizedAirQuality(BaseModel):
     observed_at: str | None = None
     pollutants: NormalizedPollutants = Field(default_factory=NormalizedPollutants)
     available_pollutants: list[str] = Field(default_factory=list)
+    provider: str | None = None
+    status: str | None = None
+    warning: str | None = None
+    is_live: bool = False
 
 
 class BaseAirQualityProvider(BaseProvider):

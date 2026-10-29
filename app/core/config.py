@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     OPENAQ_BASE_URL: str = "https://api.openaq.org/v3"
     OPEN_METEO_BASE_URL: str = "https://api.open-meteo.com/v1"
     FRANKFURTER_BASE_URL: str = "https://api.frankfurter.dev/v1"
+    EXCHANGERATE_API_BASE_URL: str = "https://open.er-api.com/v6"
     NOMINATIM_BASE_URL: str = "https://nominatim.openstreetmap.org"
     NOMINATIM_USER_AGENT: str = "UrbanLens/0.1.0 (urbanlens@urbanlens.local)"
     OSRM_BASE_URL: str = "http://router.project-osrm.org"

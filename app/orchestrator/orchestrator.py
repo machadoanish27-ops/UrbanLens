@@ -368,6 +368,21 @@ class UrbanLensOrchestrator:
                     "value": d.get("admin_name"),
                     "source": "canonical_city_registry",
                 })
+                density_info = city_record.get("population_density") or {}
+                if density_info.get("status") == "available" and density_info.get("value") is not None:
+                    signals.append({
+                        "domain": "location",
+                        "metric": "city_population_density",
+                        "value": f"{density_info['value']} {density_info.get('unit', 'people/km²')}",
+                        "source": "canonical_city_record",
+                    })
+                elif density_info.get("national_density_value") is not None:
+                    signals.append({
+                        "domain": "location",
+                        "metric": "national_population_density_benchmark",
+                        "value": f"{density_info['national_density_value']} people/km² (national benchmark)",
+                        "source": "country_metrics",
+                    })
             elif r.agent_id == "environment" and r.status != AgentStatus.UNAVAILABLE:
                 curr = d.get("current_weather") or {}
                 if curr.get("temperature_c") is not None:
@@ -437,6 +452,20 @@ class UrbanLensOrchestrator:
                     "value": d.get("total_country_institutions", 0),
                     "source": "canonical_university_registry",
                 })
+                langs = d.get("languages") or city_record.get("languages") or {}
+                if langs and langs.get("status") == "available":
+                    signals.append({
+                        "domain": "education_culture",
+                        "metric": "national_official_languages",
+                        "value": ", ".join(langs.get("official_languages", [])),
+                        "source": "un_iso_languages",
+                    })
+                    signals.append({
+                        "domain": "education_culture",
+                        "metric": "national_spoken_languages",
+                        "value": ", ".join(langs.get("spoken_languages", [])),
+                        "source": "un_iso_languages",
+                    })
                 if r.summary:
                     summary_parts.append(f"[Education & Culture]: {r.summary}")
             elif r.agent_id == "safety_healthcare" and r.status != AgentStatus.UNAVAILABLE:

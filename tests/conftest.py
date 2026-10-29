@@ -49,6 +49,24 @@ class MockCollection:
         matched = [d.copy() for d in self.documents if self._matches(d, query)]
         return MockCursor(matched)
 
+    def find_one(self, query: dict[str, Any] | None = None, projection: Any = None, sort: Any = None) -> dict[str, Any] | None:
+        cursor = self.find(query, projection)
+        if sort:
+            cursor.sort(sort)
+        results = list(cursor)
+        return results[0] if results else None
+
+    def insert_one(self, doc: dict[str, Any]) -> Any:
+        class InsertOneResult:
+            def __init__(self, inserted_id: Any):
+                self.inserted_id = inserted_id
+        d = doc.copy()
+        if "_id" not in d:
+            import uuid
+            d["_id"] = str(uuid.uuid4())
+        self.documents.append(d)
+        return InsertOneResult(d["_id"])
+
     def count_documents(self, query: dict[str, Any] | None = None) -> int:
         query = query or {}
         return sum(1 for d in self.documents if self._matches(d, query))

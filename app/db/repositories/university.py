@@ -29,7 +29,13 @@ class UniversityRepository(BaseRepository):
         if country_iso2:
             filters["country_iso2"] = country_iso2.strip().upper()
         if country_id:
-            filters["country_id"] = country_id.strip().lower()
+            raw = country_id.strip()
+            if raw.startswith("country_") and len(raw) == 10:
+                prefix, code = raw.split("_", 1)
+                canonical_country_id = f"{prefix}_{code.upper()}"
+            else:
+                canonical_country_id = raw
+            filters["country_id"] = canonical_country_id
         sort = [("name", 1)]
         return self.find_paginated(filters, sort=sort, page=page, page_size=page_size)
 

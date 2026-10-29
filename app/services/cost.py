@@ -14,18 +14,25 @@ class CostOfLivingService:
         self.cost_repo = CostOfLivingRepository(database)
 
     def get_cost_of_living(self, city_id: str, metric: str | None = None) -> dict[str, Any]:
-        """Fetch cost of living metrics for a city, or raise DataUnavailableException."""
+        """Fetch cost of living metrics for a city, or return explicit unavailable structure."""
         metrics = self.cost_repo.get_by_city_id(city_id, metric=metric)
         if not metrics:
-            raise DataUnavailableException(
-                domain="cost_of_living",
-                identifier=city_id,
-                reason="No cost-of-living metrics recorded for this city in canonical dataset",
-            )
+            return {
+                "city_id": city_id,
+                "is_available": False,
+                "status": "unavailable",
+                "metric_count": 0,
+                "metrics": [],
+                "source": None,
+                "warning": "Cost of living data is not currently available for this city.",
+            }
 
         return {
             "city_id": city_id,
             "is_available": True,
+            "status": "available",
             "metric_count": len(metrics),
             "metrics": metrics,
+            "source": "cost_of_living_canonical",
+            "warning": None,
         }

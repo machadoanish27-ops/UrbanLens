@@ -15,6 +15,10 @@ import type {
   PlacesSearchResponse,
   TransitFeedResponse,
   UniversityItem,
+  CityEducationResponse,
+  CityHealthcareResponse,
+  CurrencyConversionResponse,
+  LiveAirQualityResponse,
 } from '../types/api';
 
 export const QUERY_KEYS = {
@@ -25,9 +29,14 @@ export const QUERY_KEYS = {
   cityOverview: (cityId: string) => ['city', cityId, 'overview'] as const,
   weather: (cityId: string, days?: number) => ['city', cityId, 'weather', days] as const,
   airQuality: (cityId: string) => ['city', cityId, 'air-quality'] as const,
+  airQualityLive: (cityId: string) => ['city', cityId, 'air-quality-live'] as const,
   cost: (cityId: string) => ['city', cityId, 'cost'] as const,
   universities: (cityId: string) => ['city', cityId, 'universities'] as const,
+  education: (cityId: string, type?: string, page?: number) => ['city', cityId, 'education', type, page] as const,
+  healthcare: (cityId: string, category?: string) => ['city', cityId, 'healthcare', category] as const,
   transit: (cityId: string) => ['city', cityId, 'transit'] as const,
+  currency: (from: string, to: string, amount: number) => ['currency', from, to, amount] as const,
+  currencies: ['currencies'] as const,
   places: (lat: number, lon: number, category?: string) => ['places', lat, lon, category] as const,
   intelligence: (cityId: string, q?: string) => ['city', cityId, 'intelligence', q] as const,
 };
@@ -158,3 +167,50 @@ export function useAskIntelligence() {
     mutationFn: (payload: LLMAskRequest) => urbanLensApi.askIntelligence(payload),
   });
 }
+
+export function useCurrencyConversion(fromCurrency: string, toCurrency: string, amount: number = 1.0) {
+  return useQuery<ApiResponse<CurrencyConversionResponse>, ApiError>({
+    queryKey: QUERY_KEYS.currency(fromCurrency, toCurrency, amount),
+    queryFn: () => urbanLensApi.convertCurrency(fromCurrency, toCurrency, amount),
+    enabled: Boolean(fromCurrency && toCurrency && fromCurrency.length === 3 && toCurrency.length === 3),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useSupportedCurrencies() {
+  return useQuery<ApiResponse<Array<{ code: string; symbol: string; name: string }>>, ApiError>({
+    queryKey: QUERY_KEYS.currencies,
+    queryFn: () => urbanLensApi.getSupportedCurrencies(),
+    staleTime: 60 * 60_000,
+  });
+}
+
+export function useCityAirQualityLive(cityId: string) {
+  return useQuery<ApiResponse<LiveAirQualityResponse>, ApiError>({
+    queryKey: QUERY_KEYS.airQualityLive(cityId),
+    queryFn: () => urbanLensApi.getCityAirQualityLive(cityId),
+    enabled: Boolean(cityId),
+    staleTime: 3 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useCityEducation(cityId: string, type?: string, page: number = 1, pageSize: number = 25) {
+  return useQuery<ApiResponse<CityEducationResponse>, ApiError>({
+    queryKey: QUERY_KEYS.education(cityId, type, page),
+    queryFn: () => urbanLensApi.getCityEducation(cityId, type, page, pageSize),
+    enabled: Boolean(cityId),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useCityHealthcare(cityId: string, category?: string, radius: number = 5000, limit: number = 30) {
+  return useQuery<ApiResponse<CityHealthcareResponse>, ApiError>({
+    queryKey: QUERY_KEYS.healthcare(cityId, category),
+    queryFn: () => urbanLensApi.getCityHealthcare(cityId, category, radius, limit),
+    enabled: Boolean(cityId),
+    staleTime: 10 * 60_000,
+  });
+}
+

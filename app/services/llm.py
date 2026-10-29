@@ -18,15 +18,23 @@ from app.schemas.llm import (
     LLMIntelligenceResponse,
     LLMMetadata,
 )
+from app.services.knowledge import detect_conflicts
 
 SYSTEM_GROUNDING_PROMPT = """You are UrbanLens, a source-grounded municipal intelligence analyst.
 Your mandate is to provide verified, explainable, anti-hallucination city assessments based STRICTLY AND ONLY on the provided evidence package.
+
+DATA TIERS — EXPLICITLY DISTINGUISH IN YOUR REASONING:
+1. [Structured UrbanLens Data]: Canonical database records (e.g., city population, registered universities, country-level official languages, World Bank economic indicators).
+2. [Live Provider Data]: Real-time observations from live APIs (e.g., Open-Meteo weather observations, OpenStreetMap facilities).
+3. [RAG Knowledge Evidence]: Grounded factual excerpts from ingested reference documents.
+4. [General Model Knowledge]: If answering questions requiring broader historical or contextual understanding, you MAY provide general context, BUT YOU MUST explicitly prefix and label it: "(General Context, not verified by UrbanLens database): ...". You must NEVER present general model knowledge as if it were retrieved from UrbanLens, MongoDB, or live sensors.
+5. [Data Unavailable]: When UrbanLens lacks verified city-level data for a requested domain, topic, or metric (e.g. US city cost of living, unindexed city density, or localized municipal dialects), you MUST explicitly state: "UrbanLens does not currently have verified city-level data for this."
 
 STRICT GROUNDING RULES:
 1. Never invent numerical values, dates, percentages, or statistics.
 2. Never invent sources, publishers, citations, or URLs.
 3. Never claim any fact that is absent from the supplied evidence package.
-4. If evidence is insufficient to answer any part of the query, explicitly state: "Insufficient grounded evidence available."
+4. If evidence is unavailable or insufficient for a claim, state explicitly: "UrbanLens does not currently have verified city-level data for this."
 5. Clearly distinguish current/live observations from historical database records.
 6. Preserve observation timestamps when provided in the evidence.
 7. Do not silently combine or average metrics collected under different methodologies.
@@ -87,12 +95,13 @@ class LLMService:
         sections.append(f"TARGET CITY: {city_name} (Country: {country}, Canonical ID: {aggregated.city_id}, Population: {pop_str})")
         sections.append(f"USER QUERY: {query}\n")
 
-        # Section A: Canonical Database Benchmarks
+        # Section A: Structured UrbanLens Database Benchmarks
         db_signals: list[str] = []
+        structured_keywords = ("canonical", "mongodb", "un_iso", "country_metrics", "registry", "frankfurter")
         for s in aggregated.signals:
-            src = s.get("source") or ""
-            if "canonical" in src or "mongodb" in src:
-                db_signals.append(f"- [{s.get('domain')}]: {s.get('metric')} = {s.get('value')} (Source: {src})")
+            src = (s.get("source") or "").lower()
+            if any(k in src for k in structured_keywords):
+                db_signals.append(f"- [{s.get('domain')}]: {s.get('metric')} = {s.get('value')} (Source: {s.get('source')})")
         if db_signals:
             sections.append("=== SECTION A: CANONICAL DATABASE BENCHMARKS ===")
             sections.extend(db_signals)
@@ -101,9 +110,9 @@ class LLMService:
         # Section B: Live Provider Observations
         live_signals: list[str] = []
         for s in aggregated.signals:
-            src = s.get("source") or ""
-            if "canonical" not in src and "mongodb" not in src:
-                live_signals.append(f"- [{s.get('domain')}]: {s.get('metric')} = {s.get('value')} (Live Provider: {src})")
+            src = (s.get("source") or "").lower()
+            if not any(k in src for k in structured_keywords):
+                live_signals.append(f"- [{s.get('domain')}]: {s.get('metric')} = {s.get('value')} (Live Provider: {s.get('source')})")
         if live_signals:
             sections.append("=== SECTION B: LIVE API OBSERVATIONS ===")
             sections.extend(live_signals)
@@ -114,9 +123,28 @@ class LLMService:
             sections.append("=== SECTION C: RAG KNOWLEDGE EVIDENCE (DOCUMENT CHUNKS) ===")
             for idx, ev in enumerate(aggregated.knowledge_evidence, 1):
                 url_part = f" | URL: {ev.source_url}" if ev.source_url else ""
-                score_part = f" | Relevance Score: {ev.retrieval_score:.3f}" if ev.retrieval_score is not None else ""
-                sections.append(f"[{idx}] ID: {ev.evidence_id} | Title: {ev.title} | Publisher: {ev.publisher} | Source: {ev.source}{url_part}{score_part}")
+                score_part = f" | Composite Score: {ev.retrieval_score:.3f}" if ev.retrieval_score is not None else ""
+                tier_part = f" | Tier: {getattr(ev, 'authority_tier', 'tier_1_official')}"
+                scope_part = f" | Scope: {getattr(ev, 'scope', 'country')}"
+                fresh_part = f" | Freshness: {getattr(ev, 'freshness_status', 'fresh')}"
+                subcat_part = f" | Subcategory: {getattr(ev, 'subcategory', '')}" if getattr(ev, "subcategory", None) else ""
+                sections.append(
+                    f"[{idx}] ID: {ev.evidence_id} | Title: {ev.title} | Publisher: {ev.publisher} | "
+                    f"Source: {ev.source}{tier_part}{scope_part}{fresh_part}{subcat_part}{url_part}{score_part}"
+                )
                 sections.append(f"Text: \"{ev.text.strip()}\"\n")
+
+            # Check for source discrepancies or conflicts in retrieved evidence
+            conflicts = detect_conflicts(aggregated.knowledge_evidence)
+            if conflicts:
+                sections.append(">>> DETECTED SOURCE CONFLICTS IN KNOWLEDGE EVIDENCE <<<")
+                for c in conflicts:
+                    sections.append(
+                        f"- Divergence in [{c['category']}]: '{c['source_a']}' vs '{c['source_b']}'. "
+                        f"Note: {c['difference_note']}"
+                    )
+                sections.append(">>> Explicitly report these discrepancies in your response. <<<\n")
+
             sections.append("")
 
         # Section D: Domain Agent Evaluations
@@ -199,6 +227,17 @@ class LLMService:
                     claim=ev.text[:120] + "...",
                 )
             )
+        if not evidence_used and aggregated.signals:
+            for s in aggregated.signals[:3]:
+                evidence_used.append(
+                    EvidenceUsedItem(
+                        evidence_id=f"sig_{s.get('domain')}_{s.get('metric')}",
+                        title=f"{s.get('domain', '').title()}: {s.get('metric', '')}",
+                        source=s.get("source", "UrbanLens Database"),
+                        source_url=None,
+                        claim=f"{s.get('metric')}: {s.get('value')}",
+                    )
+                )
 
         sources = sorted(list(set(s.source_id for s in aggregated.sources)))
         warnings = list(aggregated.warnings)
@@ -254,13 +293,16 @@ class LLMService:
                 city_name=city_name,
                 country=country,
                 query=query,
-                answer="Insufficient grounded evidence available. The requested city was not resolved or has no verified baseline metrics.",
+                answer="Insufficient grounded evidence available. UrbanLens does not currently have verified city-level data for this. The requested city was not resolved or has no verified baseline metrics.",
                 recommendation=None,
                 key_points=[],
                 evidence_used=[],
                 sources=[],
                 confidence=0.0,
-                warnings=list(aggregated.warnings) + ["Insufficient grounded evidence available."],
+                warnings=list(aggregated.warnings) + [
+                    "Insufficient grounded evidence available.",
+                    "UrbanLens does not currently have verified city-level data for this.",
+                ],
                 llm=LLMMetadata(
                     provider=getattr(self.provider, "provider", "groq"),
                     model=getattr(self.provider, "model", "none"),
@@ -326,6 +368,33 @@ class LLMService:
 
         all_warnings = list(dict.fromkeys(list(parsed.warnings) + list(aggregated.warnings)))
 
+        evidence_used = list(parsed.evidence_used)
+        if not evidence_used and aggregated.knowledge_evidence:
+            for ev in aggregated.knowledge_evidence[:3]:
+                evidence_used.append(
+                    EvidenceUsedItem(
+                        evidence_id=ev.evidence_id,
+                        title=ev.title,
+                        source=ev.source,
+                        source_url=ev.source_url,
+                        claim=ev.text[:140] + "...",
+                    )
+                )
+        elif not evidence_used and aggregated.signals:
+            for s in aggregated.signals[:3]:
+                evidence_used.append(
+                    EvidenceUsedItem(
+                        evidence_id=f"sig_{s.get('domain')}_{s.get('metric')}",
+                        title=f"{s.get('domain', '').title()}: {s.get('metric', '')}",
+                        source=s.get("source", "UrbanLens Database"),
+                        source_url=None,
+                        claim=f"{s.get('metric')}: {s.get('value')}",
+                    )
+                )
+
+        if not evidence_used and not aggregated.signals and not aggregated.knowledge_evidence:
+            all_warnings.append("UrbanLens does not currently have verified city-level data for this topic.")
+
         result = LLMAskResponse(
             city_id=aggregated.city_id,
             city_name=city_name,
@@ -334,7 +403,7 @@ class LLMService:
             answer=parsed.answer,
             recommendation=parsed.recommendation,
             key_points=parsed.key_points,
-            evidence_used=parsed.evidence_used,
+            evidence_used=evidence_used,
             sources=all_sources,
             confidence=parsed.confidence,
             warnings=all_warnings,

@@ -11,6 +11,7 @@ import {
   Search,
 } from 'lucide-react';
 import { useDbHealth, useHealth } from '../hooks/useUrbanLens';
+import { CurrencyWidget } from './CurrencyWidget';
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -94,6 +95,11 @@ export const Navbar: React.FC = () => {
               <span>Compare</span>
             </NavLink>
           </nav>
+
+          {/* Global Live Currency Widget */}
+          <div className="flex items-center">
+            <CurrencyWidget />
+          </div>
 
           {/* Live System Status Pill */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs">

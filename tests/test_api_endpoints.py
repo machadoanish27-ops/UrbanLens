@@ -155,12 +155,15 @@ def test_cost_of_living_endpoint(client: TestClient) -> None:
     assert body["success"] is True
     assert body["data"]["metric_count"] >= 2
 
-    # Unavailable city -> 404 with DATA_UNAVAILABLE code
+    # Unindexed city -> 200 with status='unavailable' and honest warning
     unavail_resp = client.get("/api/v1/cities/paris_fr/cost-of-living")
-    assert unavail_resp.status_code == 404
+    assert unavail_resp.status_code == 200
     unavail_body = unavail_resp.json()
-    assert unavail_body["success"] is False
-    assert unavail_body["error"]["code"] == "DATA_UNAVAILABLE"
+    assert unavail_body["success"] is True
+    assert unavail_body["data"]["is_available"] is False
+    assert unavail_body["data"]["status"] == "unavailable"
+    assert unavail_body["data"]["metric_count"] == 0
+    assert "not currently available" in unavail_body["data"]["warning"]
 
 
 def test_universities_endpoints(client: TestClient) -> None:

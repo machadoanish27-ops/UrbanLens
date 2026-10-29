@@ -17,6 +17,10 @@ import type {
   PlacesSearchResponse,
   TransitFeedResponse,
   UniversityItem,
+  CityEducationResponse,
+  CityHealthcareResponse,
+  CurrencyConversionResponse,
+  LiveAirQualityResponse,
 } from '../types/api';
 
 const API_BASE_URL = (
@@ -141,6 +145,63 @@ export const urbanLensApi = {
   ): Promise<ApiResponse<AirQualityResponse>> => {
     return request<AirQualityResponse>(
       `/api/v1/cities/${encodeURIComponent(cityId)}/air-quality`
+    );
+  },
+
+  getCityAirQualityLive: async (
+    cityId: string,
+    radius: number = 25000
+  ): Promise<ApiResponse<LiveAirQualityResponse>> => {
+    return request<LiveAirQualityResponse>(
+      `/api/v1/cities/${encodeURIComponent(cityId)}/air-quality/live?radius=${radius}`
+    );
+  },
+
+  // Live Currency
+  convertCurrency: async (
+    fromCurrency: string,
+    toCurrency: string,
+    amount: number = 1.0,
+    includeBenchmarks: boolean = true
+  ): Promise<ApiResponse<CurrencyConversionResponse>> => {
+    return request<CurrencyConversionResponse>(
+      `/api/v1/currency/convert?from_currency=${encodeURIComponent(fromCurrency)}&to_currency=${encodeURIComponent(toCurrency)}&amount=${amount}&include_benchmarks=${includeBenchmarks}`
+    );
+  },
+
+  getSupportedCurrencies: async (): Promise<ApiResponse<Array<{ code: string; symbol: string; name: string }>>> => {
+    return request<Array<{ code: string; symbol: string; name: string }>>('/api/v1/currency/currencies');
+  },
+
+  // Education Discovery
+  getCityEducation: async (
+    cityId: string,
+    type?: string,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<ApiResponse<CityEducationResponse>> => {
+    const query = new URLSearchParams();
+    if (type) query.set('type', type);
+    query.set('page', String(page));
+    query.set('page_size', String(pageSize));
+    return request<CityEducationResponse>(
+      `/api/v1/cities/${encodeURIComponent(cityId)}/education?${query.toString()}`
+    );
+  },
+
+  // Healthcare Discovery
+  getCityHealthcare: async (
+    cityId: string,
+    category?: string,
+    radius: number = 5000,
+    limit: number = 30
+  ): Promise<ApiResponse<CityHealthcareResponse>> => {
+    const query = new URLSearchParams();
+    if (category) query.set('category', category);
+    query.set('radius', String(radius));
+    query.set('limit', String(limit));
+    return request<CityHealthcareResponse>(
+      `/api/v1/cities/${encodeURIComponent(cityId)}/healthcare?${query.toString()}`
     );
   },
 

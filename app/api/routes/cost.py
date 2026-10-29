@@ -30,9 +30,12 @@ def get_city_cost_of_living(
     return ApiResponse(
         data=CityCostOfLivingResponse(
             city_id=city_id,
-            is_available=True,
+            is_available=data.get("is_available", True),
+            status=data.get("status", "available"),
             metric_count=data.get("metric_count", len(metric_items)),
             metrics=metric_items,
+            source=data.get("source"),
+            warning=data.get("warning"),
         ),
-        meta=ResponseMeta(source="cost_of_living_canonical"),
+        meta=ResponseMeta(source=data.get("source") or "cost_of_living_canonical"),
     )

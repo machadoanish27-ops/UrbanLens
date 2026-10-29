@@ -41,9 +41,32 @@ export interface CityItem {
   provider_identities?: Record<string, string>;
 }
 
+export interface CityCurrencyInfo {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
 export interface CityDetailResponse extends CityItem {
   aliases: string[];
   provider_identities: Record<string, string>;
+  currency?: CityCurrencyInfo | null;
+  languages?: {
+    official_languages?: string[];
+    spoken_languages?: string[];
+    cultural_notes?: string | null;
+    source?: string | null;
+  } | null;
+  population_density?: {
+    status: string;
+    value?: number | null;
+    unit: string;
+    area_km2?: number | null;
+    level: string;
+    national_density_value?: number | null;
+    national_density_period?: number | null;
+    national_density_source?: string | null;
+  } | null;
 }
 
 export interface WeatherCurrent {
@@ -304,3 +327,145 @@ export interface PlacesSearchResponse {
   count: number;
   meta: Record<string, any>;
 }
+
+export interface UsdBenchmark {
+  currency: string;
+  rate_to_usd?: number | null;
+  usd_to_currency?: number | null;
+  label: string;
+}
+
+export interface CurrencyConversionResponse {
+  from_currency: string;
+  to_currency: string;
+  base_currency?: string | null;
+  quote_currency?: string | null;
+  amount: number;
+  rate?: number | null;
+  inverse_rate?: number | null;
+  converted_amount?: number | null;
+  provider: string;
+  source: string;
+  status: string; // 'fresh' | 'cached' | 'unavailable'
+  observed_at?: string | null;
+  fetched_at?: string | null;
+  last_updated?: string | null;
+  usd_benchmark_base?: UsdBenchmark | null;
+  usd_benchmark_quote?: UsdBenchmark | null;
+  conversion?: {
+    from_currency: string;
+    to_currency: string;
+    amount: number;
+    rate: number;
+    converted_amount: number;
+    date: string;
+  } | null;
+  meta: Record<string, any>;
+}
+
+export interface LiveAirQualityData {
+  latitude: number;
+  longitude: number;
+  location_name?: string | null;
+  observed_at?: string | null;
+  pollutants: {
+    pm25?: number | null;
+    pm10?: number | null;
+    no2?: number | null;
+    o3?: number | null;
+    so2?: number | null;
+    co?: number | null;
+  };
+  available_pollutants: string[];
+  provider?: string | null;
+  status?: string | null;
+  warning?: string | null;
+  is_live: boolean;
+}
+
+export interface LiveAirQualityResponse {
+  city_id: string;
+  city_name?: string | null;
+  latitude: number;
+  longitude: number;
+  air_quality: LiveAirQualityData | null;
+  meta: {
+    provider: string;
+    source: string;
+    status: string;
+    observed_at?: string | null;
+    fetched_at?: string | null;
+    error_detail?: string | null;
+    cached?: boolean;
+  };
+}
+
+export interface InstitutionItem {
+  institution_id: string;
+  name: string;
+  type: string;
+  city?: string | null;
+  country?: string | null;
+  country_iso2?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  distance_meters?: number | null;
+  website?: string | null;
+  has_verified_website: boolean;
+  source: string;
+  source_url?: string | null;
+  verified_at?: string | null;
+  provider: string;
+  status: string;
+}
+
+export interface CityEducationResponse {
+  city_id: string;
+  city_name: string;
+  country_iso2?: string | null;
+  total: number;
+  displayed_count?: number;
+  canonical_count: number;
+  community_mapped_count: number;
+  limit?: number;
+  offset?: number;
+  page?: number;
+  page_size?: number;
+  items?: InstitutionItem[];
+  institutions: InstitutionItem[];
+  available_types: string[];
+  disclaimer: string;
+  meta: Record<string, any>;
+}
+
+export interface HealthcareFacilityItem {
+  facility_id: string;
+  name: string;
+  type: string;
+  amenity?: string | null;
+  address?: string | null;
+  latitude: number;
+  longitude: number;
+  distance_meters?: number | null;
+  phone?: string | null;
+  website?: string | null;
+  has_verified_website: boolean;
+  opening_hours?: string | null;
+  emergency?: boolean | null;
+  source: string;
+  provider: string;
+  status: string;
+  verified_at?: string | null;
+}
+
+export interface CityHealthcareResponse {
+  city_id: string;
+  city_name: string;
+  total: number;
+  facilities: HealthcareFacilityItem[];
+  available_types: string[];
+  disclaimer: string;
+  meta: Record<string, any>;
+}
+

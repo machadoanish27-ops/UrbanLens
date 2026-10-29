@@ -50,3 +50,14 @@ logs/
 # OS Specific
 .DS_Store
 Thumbs.db
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# QA artifacts, screenshots, and scratch
+scripts/qa/screenshots/
+scripts/qa/qa_results.json
+scratch/
+

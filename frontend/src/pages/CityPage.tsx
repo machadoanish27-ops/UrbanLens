@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Compass,
@@ -16,20 +16,26 @@ import {
   Calendar,
   Eye,
   RefreshCw,
-  ShieldCheck,
   Building2,
   Navigation,
+  ArrowRight,
+  ArrowLeftRight,
+  Phone,
+  Clock,
+  HeartPulse,
 } from 'lucide-react';
 import {
   useCity,
   useCityWeather,
-  useCityAirQuality,
+  useCityAirQualityLive,
   useCityCost,
-  useCityUniversities,
   useCityTransit,
-  useCityPlaces,
   useCityIntelligence,
+  useCityEducation,
+  useCityHealthcare,
+  useCurrencyConversion,
 } from '../hooks/useUrbanLens';
+import { useOriginDestination } from '../context/OriginDestinationContext';
 import { StatusBadge } from '../components/StatusBadge';
 import { ProvenanceTag } from '../components/ProvenanceTag';
 import { MetricCard } from '../components/MetricCard';
@@ -37,23 +43,48 @@ import { EvidenceCard } from '../components/EvidenceCard';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { InteractiveMap, type MapMarkerItem } from '../components/InteractiveMap';
 
-type TabKey = 'overview' | 'map' | 'weather' | 'airQuality' | 'cost' | 'education' | 'transit' | 'healthcare' | 'agents';
+type TabKey =
+  | 'overview'
+  | 'relocation'
+  | 'map'
+  | 'weather'
+  | 'airQuality'
+  | 'cost'
+  | 'education'
+  | 'healthcare'
+  | 'transit'
+  | 'agents';
 
-const AMENITY_CATEGORIES = [
-  { key: 'hospital', label: 'Hospitals', emoji: '🏥' },
+const EDU_FILTER_TYPES = [
+  { key: 'all', label: 'All Institutions' },
+  { key: 'University', label: 'Universities' },
+  { key: 'College', label: 'Colleges' },
+  { key: 'Engineering College', label: 'Engineering' },
+  { key: 'Medical College', label: 'Medical' },
+  { key: 'Business School', label: 'Business' },
+  { key: 'School', label: 'Schools' },
+  { key: 'Technical Institute', label: 'Technical' },
+];
+
+const HEALTH_FILTER_CATEGORIES = [
+  { key: 'all', label: 'All Facilities', emoji: '🌐' },
+  { key: 'hospital', label: 'Hospitals', emoji: '🏨' },
   { key: 'clinic', label: 'Clinics', emoji: '🩺' },
+  { key: 'dental', label: 'Dental Clinics', emoji: '🦷' },
   { key: 'pharmacy', label: 'Pharmacies', emoji: '💊' },
-  { key: 'school', label: 'Schools', emoji: '🏫' },
-  { key: 'supermarket', label: 'Supermarkets', emoji: '🛒' },
-  { key: 'park', label: 'Parks & Greenery', emoji: '🌳' },
+  { key: 'urgent_care', label: 'Urgent Care', emoji: '🚨' },
 ];
 
 export const CityPage: React.FC = () => {
   const { cityId } = useParams<{ cityId: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
-  const [selectedAmenityCategory, setSelectedAmenityCategory] = useState<string>('hospital');
+  const [selectedEduType, setSelectedEduType] = useState<string>('all');
+  const [selectedHealthCategory, setSelectedHealthCategory] = useState<string>('all');
 
-  // Real backend queries
+  // Origin & Destination Context
+  const { origin, setDestination, openOriginModal } = useOriginDestination();
+
+  // Primary Canonical City Query
   const {
     data: cityData,
     isLoading: cityLoading,
@@ -62,6 +93,43 @@ export const CityPage: React.FC = () => {
     isRefetching: isRefetchingCity,
   } = useCity(cityId || '');
 
+  const city = cityData?.data;
+
+  // Sync Destination when City loads
+  useEffect(() => {
+    if (city) {
+      setDestination({
+        city_id: city.city_id,
+        city_name: city.name,
+        country_name: city.country_id,
+        country_iso2: city.country_iso2,
+        currency_code: city.currency?.code || 'USD',
+        currency_symbol: city.currency?.symbol || '$',
+        currency_name: city.currency?.name || 'US Dollar',
+      });
+    }
+  }, [city, setDestination]);
+
+  // Live Currency Conversion: Origin -> Destination
+  const baseCurrency = origin.currency_code || 'INR';
+  const destCurrency = city?.currency?.code || 'USD';
+
+  const {
+    data: fxData,
+    isLoading: fxLoading,
+    refetch: refetchFx,
+    isRefetching: isRefetchingFx,
+  } = useCurrencyConversion(baseCurrency, destCurrency, 1.0);
+  const fx = fxData?.data;
+
+  // Budget conversions
+  const { data: budgetData } = useCurrencyConversion(baseCurrency, destCurrency, 100000.0);
+  const budgetFx = budgetData?.data;
+
+  const { data: inverseBudgetData } = useCurrencyConversion(destCurrency, baseCurrency, 100000.0);
+  const inverseBudgetFx = inverseBudgetData?.data;
+
+  // Live Weather Query
   const {
     data: weatherData,
     isLoading: weatherLoading,
@@ -69,13 +137,16 @@ export const CityPage: React.FC = () => {
     isRefetching: isRefetchingWeather,
   } = useCityWeather(cityId || '');
 
+  // Live Air Quality Query (OpenAQ with WHO fallback)
   const {
-    data: aqiData,
-    isLoading: aqiLoading,
-    refetch: refetchAqi,
-    isRefetching: isRefetchingAqi,
-  } = useCityAirQuality(cityId || '');
+    data: aqiLiveData,
+    isLoading: aqiLiveLoading,
+    refetch: refetchAqiLive,
+    isRefetching: isRefetchingAqiLive,
+  } = useCityAirQualityLive(cityId || '');
+  const aqiData = aqiLiveData?.data?.air_quality;
 
+  // Cost of Living Query
   const {
     data: costData,
     isLoading: costLoading,
@@ -83,13 +154,35 @@ export const CityPage: React.FC = () => {
     isRefetching: isRefetchingCost,
   } = useCityCost(cityId || '');
 
+  // Education Discovery Query (Canonical DB + OSM)
   const {
-    data: uniData,
-    isLoading: uniLoading,
-    refetch: refetchUnis,
-    isRefetching: isRefetchingUnis,
-  } = useCityUniversities(cityId || '');
+    data: eduData,
+    isLoading: eduLoading,
+    refetch: refetchEdu,
+    isRefetching: isRefetchingEdu,
+  } = useCityEducation(
+    cityId || '',
+    selectedEduType === 'all' ? undefined : selectedEduType,
+    1,
+    40
+  );
+  const education = eduData?.data;
 
+  // Healthcare Discovery Query (OSM Overpass with contact details)
+  const {
+    data: healthData,
+    isLoading: healthLoading,
+    refetch: refetchHealth,
+    isRefetching: isRefetchingHealth,
+  } = useCityHealthcare(
+    cityId || '',
+    selectedHealthCategory === 'all' ? undefined : selectedHealthCategory,
+    5000,
+    35
+  );
+  const healthcare = healthData?.data;
+
+  // Transit Query
   const {
     data: transitData,
     isLoading: transitLoading,
@@ -97,6 +190,7 @@ export const CityPage: React.FC = () => {
     isRefetching: isRefetchingTransit,
   } = useCityTransit(cityId || '');
 
+  // Multi-Agent Intelligence Query
   const {
     data: intelData,
     isLoading: intelLoading,
@@ -104,42 +198,50 @@ export const CityPage: React.FC = () => {
     isRefetching: isRefetchingIntel,
   } = useCityIntelligence(cityId || '');
 
-  const city = cityData?.data;
   const weather = weatherData?.data?.weather;
   const weatherMeta = weatherData?.data?.meta;
-  const aqi = aqiData?.data;
   const cost = costData?.data;
-  const universities = uniData?.data || [];
   const transit = transitData?.data;
   const intelligence = intelData?.data;
 
-  // Real places query for Healthcare & Amenities tab
-  const {
-    data: placesData,
-    isLoading: placesLoading,
-    refetch: refetchPlaces,
-    isRefetching: isRefetchingPlaces,
-  } = useCityPlaces({
-    lat: city?.latitude ?? 0,
-    lon: city?.longitude ?? 0,
-    category: selectedAmenityCategory,
-    radius: 4000,
-    limit: 15,
-  });
+  // Build combined map markers from Education institutions & Healthcare facilities
+  const mapMarkers: MapMarkerItem[] = useMemo(() => {
+    const list: MapMarkerItem[] = [];
 
-  const places = placesData?.data?.places || [];
+    // Education markers
+    (education?.institutions || []).forEach((inst) => {
+      if (inst.latitude && inst.longitude) {
+        list.push({
+          lat: inst.latitude,
+          lon: inst.longitude,
+          title: inst.name,
+          category: inst.type,
+          address: inst.address || `${inst.city}, ${inst.country}`,
+          provider: inst.provider,
+          website: inst.website || undefined,
+        });
+      }
+    });
 
-  // Build real interactive map markers from real POIs and Universities
-  const mapMarkers: MapMarkerItem[] = [
-    ...places.map((p) => ({
-      lat: p.latitude ?? city?.latitude ?? 0,
-      lon: p.longitude ?? city?.longitude ?? 0,
-      title: p.name || `${selectedAmenityCategory} facility`,
-      category: p.category || selectedAmenityCategory,
-      address: p.address || undefined,
-      distance_meters: p.distance_meters ?? undefined,
-    })),
-  ];
+    // Healthcare markers
+    (healthcare?.facilities || []).forEach((fac) => {
+      if (fac.latitude && fac.longitude) {
+        list.push({
+          lat: fac.latitude,
+          lon: fac.longitude,
+          title: fac.name,
+          category: fac.type,
+          address: fac.address || undefined,
+          distance_meters: fac.distance_meters || undefined,
+          provider: fac.provider,
+          website: fac.website || undefined,
+          phone: fac.phone || undefined,
+        });
+      }
+    });
+
+    return list;
+  }, [education, healthcare]);
 
   if (cityLoading) {
     return (
@@ -171,14 +273,15 @@ export const CityPage: React.FC = () => {
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'overview', label: 'Overview', icon: <Eye className="w-4 h-4" /> },
-    { key: 'map', label: 'Geographic Map', icon: <MapPin className="w-4 h-4" /> },
+    { key: 'relocation', label: 'Relocation & Currency', icon: <ArrowLeftRight className="w-4 h-4" /> },
+    { key: 'map', label: 'Interactive Map', icon: <MapPin className="w-4 h-4" /> },
     { key: 'weather', label: 'Live Weather', icon: <Thermometer className="w-4 h-4" /> },
     { key: 'airQuality', label: 'Air Quality', icon: <Wind className="w-4 h-4" /> },
     { key: 'cost', label: 'Cost of Living', icon: <Coins className="w-4 h-4" /> },
-    { key: 'education', label: 'Universities', icon: <GraduationCap className="w-4 h-4" /> },
+    { key: 'education', label: 'Education Discovery', icon: <GraduationCap className="w-4 h-4" /> },
+    { key: 'healthcare', label: 'Healthcare Discovery', icon: <HeartPulse className="w-4 h-4" /> },
     { key: 'transit', label: 'Mobility & Transit', icon: <Bus className="w-4 h-4" /> },
-    { key: 'healthcare', label: 'Healthcare & Amenities', icon: <ShieldCheck className="w-4 h-4" /> },
-    { key: 'agents', label: 'Multi-Agent Intelligence', icon: <Layers className="w-4 h-4" /> },
+    { key: 'agents', label: 'AI Intelligence', icon: <Layers className="w-4 h-4" /> },
   ];
 
   return (
@@ -192,6 +295,11 @@ export const CityPage: React.FC = () => {
                 {city.country_iso2} • {city.country_id}
               </span>
               <StatusBadge status="database" label="Atlas Canonical Record" />
+              {city.currency && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {city.currency.code} ({city.currency.symbol})
+                </span>
+              )}
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
@@ -268,6 +376,58 @@ export const CityPage: React.FC = () => {
       {/* Tab 1: Overview */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Relocation Snapshot Card */}
+          <div className="glass-panel p-6 rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-950/20 via-slate-900/60 to-slate-900/40">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                  <ArrowLeftRight className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                      Relocation Snapshot
+                    </span>
+                    <button
+                      onClick={openOriginModal}
+                      className="text-[11px] text-indigo-300 hover:text-white underline decoration-indigo-500/50"
+                    >
+                      (Change Origin)
+                    </button>
+                  </div>
+                  <h3 className="text-base font-bold text-white mt-0.5">
+                    {origin.city_name}, {origin.country_name} ({origin.currency_code} {origin.currency_symbol}) &rarr; {city.name}, {city.country_id} ({destCurrency} {city.currency?.symbol || ''})
+                  </h3>
+                </div>
+              </div>
+
+              {/* Quick FX pill */}
+              <div className="flex items-center gap-3">
+                {fx ? (
+                  <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-right">
+                    <div className="text-xs font-semibold text-slate-300">
+                      1 {origin.currency_code} = <span className="text-emerald-400 font-mono font-bold">{fx.rate?.toFixed(4)}</span> {destCurrency}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      1 {destCurrency} = <span className="font-mono">{fx.inverse_rate != null ? fx.inverse_rate.toFixed(4) : '—'}</span> {origin.currency_code} • {fx.provider}
+                    </div>
+                  </div>
+                ) : fxLoading ? (
+                  <div className="text-xs text-slate-400 animate-pulse">Loading live FX...</div>
+                ) : (
+                  <div className="text-xs text-slate-500">Live rate unavailable</div>
+                )}
+                <button
+                  onClick={() => setActiveTab('relocation')}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 text-xs font-semibold transition-all whitespace-nowrap"
+                >
+                  Full Relocation View &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               label="Population"
@@ -286,44 +446,48 @@ export const CityPage: React.FC = () => {
             />
             <MetricCard
               label="Air Quality (PM2.5)"
-              value={
-                aqi?.global_weather?.[0]?.pm25 !== undefined
-                  ? aqi.global_weather[0].pm25
-                  : (aqi?.who_annual?.[0]?.pm25_annual_mean_ug_m3 ?? aqi?.who_annual?.[0]?.pm25_annual_mean)
-              }
+              value={aqiData?.pollutants?.pm25}
               unit="µg/m³"
               icon={<Wind className="w-4 h-4" />}
-              status={aqi?.global_weather?.length ? 'fresh' : aqi?.who_annual?.length ? 'database' : 'unavailable'}
-              subValue={aqi?.who_annual?.[0] ? `WHO Annual Mean (${aqi.who_annual[0].year})` : 'Global Sensor Data'}
+              status={aqiData?.status === 'live' ? 'fresh' : aqiData?.status === 'database' ? 'database' : 'unavailable'}
+              subValue={
+                aqiData
+                  ? `${aqiData.provider} (${(aqiData.status || 'data').toUpperCase()})`
+                  : 'Sensors Unavailable'
+              }
             />
             <MetricCard
-              label="Universities Tracked"
-              value={universities.length}
+              label="Institutions Indexed"
+              value={education ? `${education.total.toLocaleString()} Total (${education.displayed_count ?? education.institutions.length} Shown)` : '—'}
               icon={<GraduationCap className="w-4 h-4" />}
               status="database"
-              subValue="Accredited Institutions"
+              subValue={
+                education
+                  ? `${education.canonical_count || 0} Universities, ${education.community_mapped_count || 0} Colleges/Schools`
+                  : 'Canonical Directory'
+              }
             />
           </div>
 
-          {/* Quick Interactive Mini-Map Preview */}
+          {/* Interactive Mini-Map Preview */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Geographic Anchor & Surrounding Territory</span>
+                <span>Geographic Anchor & Mapped Institutions / Facilities</span>
               </span>
               <button
                 onClick={() => setActiveTab('map')}
                 className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
               >
-                Expand Full Interactive Map &rarr;
+                Expand Full Interactive Map ({mapMarkers.length} POIs) &rarr;
               </button>
             </div>
             <InteractiveMap
               latitude={city.latitude}
               longitude={city.longitude}
               cityName={city.name}
-              markers={mapMarkers.slice(0, 5)}
+              markers={mapMarkers.slice(0, 15)}
               height="h-64"
             />
           </div>
@@ -342,7 +506,7 @@ export const CityPage: React.FC = () => {
           {/* Registry Identifiers */}
           <div className="glass-panel p-6 rounded-2xl border border-slate-800">
             <h3 className="text-sm font-bold text-white mb-4">Canonical Registry Identifiers</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-slate-500 block mb-1">City ID (Slug)</span>
                 <span className="font-mono text-slate-200 font-semibold">{city.city_id}</span>
@@ -351,6 +515,12 @@ export const CityPage: React.FC = () => {
                 <span className="text-slate-500 block mb-1">Country ISO Alpha-2 / Alpha-3</span>
                 <span className="font-mono text-slate-200 font-semibold">
                   {city.country_iso2} / {city.country_iso3 || 'N/A'}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-slate-500 block mb-1">Official Currency</span>
+                <span className="font-mono text-emerald-400 font-semibold">
+                  {city.currency?.code || 'USD'} ({city.currency?.symbol || '$'}) • {city.currency?.name || ''}
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
@@ -364,7 +534,234 @@ export const CityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: Geographic Map */}
+      {/* Tab 2: Relocation & Currency */}
+      {activeTab === 'relocation' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <ArrowLeftRight className="w-5 h-5 text-indigo-400" />
+                <span>Origin &rarr; Destination Relocation Translation</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Real-time exchange conversion between origin currency and destination currency, strictly distinct from cost-of-living purchasing power.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={openOriginModal}
+                className="px-3.5 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 text-xs font-semibold border border-indigo-500/40 transition-colors"
+              >
+                Change Origin
+              </button>
+              <button
+                onClick={() => refetchFx()}
+                disabled={isRefetchingFx}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                title="Refresh rates"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefetchingFx ? 'animate-spin text-indigo-400' : ''}`} />
+                <span>Refresh FX</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Context Banner */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-5 rounded-2xl glass-panel border border-slate-800 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">
+                FROM
+              </span>
+              <div className="text-xl font-black text-white">
+                {origin.city_name}, {origin.country_name}
+              </div>
+              <div className="text-xs text-slate-300 font-mono font-bold">
+                {origin.currency_code} ({origin.currency_symbol})
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Source: {origin.source}
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl glass-panel border border-slate-800 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">
+                TO
+              </span>
+              <div className="text-xl font-black text-white">
+                {city.name}, {city.country_id}
+              </div>
+              <div className="text-xs text-slate-300 font-mono font-bold">
+                {destCurrency} ({city.currency?.symbol || ''})
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Source: Canonical Atlas City Record ({city.country_iso2})
+              </div>
+            </div>
+          </div>
+
+          {/* Live Rates & Budget Translation Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Direct & Inverse Rates */}
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-white">Official Exchange Rate Snapshot</h4>
+                {fx && (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      fx.status === 'live' || fx.status === 'fresh'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : fx.status === 'cached'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}
+                  >
+                    {fx.status === 'fresh' ? 'LIVE' : fx.status.toUpperCase()} • {fx.provider}
+                  </span>
+                )}
+              </div>
+
+              {fxLoading ? (
+                <LoadingSkeleton count={2} height="h-16" />
+              ) : fx?.rate ? (
+                <div className="space-y-3">
+                  <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                    <span className="text-xs text-slate-400 font-mono">1 {origin.currency_code} =</span>
+                    <span className="text-lg font-mono font-bold text-white">
+                      <span className="text-emerald-400">{fx.rate.toFixed(4)}</span> {destCurrency}
+                    </span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                    <span className="text-xs text-slate-400 font-mono">1 {destCurrency} =</span>
+                    <span className="text-lg font-mono font-bold text-white">
+                      <span className="text-emerald-400">{fx.inverse_rate != null ? fx.inverse_rate.toFixed(4) : '—'}</span> {origin.currency_code}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-400">
+                    <div>
+                      <span className="text-slate-500 block">Provider:</span>
+                      <span className="font-semibold text-slate-200">{fx.provider}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Status:</span>
+                      <span className={`font-bold ${fx.status === 'live' || fx.status === 'fresh' ? 'text-emerald-400' : fx.status === 'cached' ? 'text-amber-400' : 'text-rose-400'}`}>
+                        {(fx.status === 'fresh' ? 'LIVE' : fx.status).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Updated:</span>
+                      <span className="font-mono text-slate-200">{fx.observed_at || (fx.fetched_at ? new Date(fx.fetched_at).toLocaleTimeString() : 'Recent')}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 text-center rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">
+                  Live FX rate currently unavailable between {origin.currency_code} and {destCurrency}.
+                </div>
+              )}
+            </div>
+
+            {/* Example Monthly Budget Translation */}
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+              <h4 className="text-sm font-bold text-white">Example Budget Translation</h4>
+              <p className="text-xs text-slate-400">
+                Nominal currency translation for equivalent numerical sums (before local cost-of-living adjustments).
+              </p>
+
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <span className="text-[11px] text-slate-400">Monthly Budget (Origin)</span>
+                  <div className="text-base font-mono font-bold text-slate-200">
+                    {origin.currency_symbol}100,000 {origin.currency_code}
+                  </div>
+                  <div className="text-xs text-emerald-400 font-mono font-semibold flex items-center gap-1">
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>
+                      ≈ {city.currency?.symbol || ''}
+                      {budgetFx?.converted_amount
+                        ? Math.round(budgetFx.converted_amount).toLocaleString()
+                        : '—'}{' '}
+                      {destCurrency}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                  <span className="text-[11px] text-slate-400">Inverse Monthly Budget (Destination)</span>
+                  <div className="text-base font-mono font-bold text-slate-200">
+                    {city.currency?.symbol || ''}100,000 {destCurrency}
+                  </div>
+                  <div className="text-xs text-emerald-400 font-mono font-semibold flex items-center gap-1">
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>
+                      ≈ {origin.currency_symbol}
+                      {inverseBudgetFx?.converted_amount
+                        ? Math.round(inverseBudgetFx.converted_amount).toLocaleString()
+                        : '—'}{' '}
+                      {origin.currency_code}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* USD Benchmark Section */}
+          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-white">USD Relative Strength Benchmark</h4>
+                <p className="text-xs text-slate-400">
+                  Relative currency strength anchored against the US Dollar (strictly labelled USD benchmark, not "highest currency").
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                USD Reference Base
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-xs text-slate-500 block mb-1">
+                  Origin Currency ({origin.currency_code}) USD Benchmark
+                </span>
+                <span className="text-base font-mono font-bold text-slate-200">
+                  {fx?.usd_benchmark_base?.rate_to_usd != null ? (
+                    <>
+                      1 {origin.currency_code} = <span className="text-cyan-400">${fx.usd_benchmark_base.rate_to_usd.toFixed(4)} USD</span>
+                    </>
+                  ) : (
+                    'Benchmark Unavailable'
+                  )}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-xs text-slate-500 block mb-1">
+                  Destination Currency ({destCurrency}) USD Benchmark
+                </span>
+                <span className="text-base font-mono font-bold text-slate-200">
+                  {fx?.usd_benchmark_quote?.rate_to_usd != null ? (
+                    <>
+                      1 {destCurrency} = <span className="text-cyan-400">${fx.usd_benchmark_quote.rate_to_usd.toFixed(4)} USD</span>
+                    </>
+                  ) : (
+                    'Benchmark Unavailable'
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Critical Distinction Notice */}
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1">
+            <strong>Critical Analytical Distinction:</strong> Currency conversion measures nominal foreign exchange pricing only. It does not mean purchasing power or local living costs are normalized. To inspect real grocery, rent, and utility baselines, see the separate <em>Cost of Living</em> section below.
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Interactive Map */}
       {activeTab === 'map' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -374,10 +771,10 @@ export const CityPage: React.FC = () => {
                 <span>Interactive Geographic Intelligence Map</span>
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Grounded OpenStreetMap coordinates for {city.name} with live POI discovery.
+                Grounded coordinates for {city.name} with category-filtered discovery of universities, colleges, hospitals, clinics, dental facilities, and pharmacies.
               </p>
             </div>
-            <ProvenanceTag source="OpenStreetMap (ODbL)" confidence={1.0} />
+            <ProvenanceTag source="OpenStreetMap (ODbL) & Canonical DB" confidence={1.0} />
           </div>
 
           <InteractiveMap
@@ -386,12 +783,13 @@ export const CityPage: React.FC = () => {
             cityName={city.name}
             markers={mapMarkers}
             zoom={13}
-            height="h-[520px]"
+            height="h-[560px]"
+            showFilters={true}
           />
         </div>
       )}
 
-      {/* Tab 3: Live Weather */}
+      {/* Tab 4: Live Weather */}
       {activeTab === 'weather' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -483,7 +881,11 @@ export const CityPage: React.FC = () => {
                         className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center flex flex-col justify-between"
                       >
                         <span className="text-[11px] font-medium text-slate-400">
-                          {new Date(df.date).toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
+                          {new Date(df.date).toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'numeric',
+                            day: 'numeric',
+                          })}
                         </span>
                         <div className="my-2">
                           <span className="text-base font-bold text-white">{df.temp_max_c}°</span>
@@ -502,127 +904,132 @@ export const CityPage: React.FC = () => {
             <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
               <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
               <p className="text-sm text-slate-300 font-medium">Weather Data Currently Unavailable</p>
-              <p className="text-xs text-slate-500 mt-1">
-                The Open-Meteo live endpoint could not return atmospheric data for this coordinate.
-              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab 4: Air Quality */}
+      {/* Tab 5: Air Quality */}
       {activeTab === 'airQuality' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Wind className="w-5 h-5 text-teal-400" />
-                <span>Air Quality & Environmental Sensor Metrics</span>
+                <span>Live Air Quality & Atmospheric Pollution</span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Strict unblended separation between Global Weather station observations and WHO annual benchmarks.
+                Primary: OpenAQ live sensor API • Fallback: MongoDB / WHO historical annual standards.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => refetchAqi()}
-                disabled={isRefetchingAqi}
+                onClick={() => refetchAqiLive()}
+                disabled={isRefetchingAqiLive}
                 className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
-                title="Refetch air quality"
+                title="Refetch live air quality"
               >
-                <RefreshCw className={`w-3 h-3 ${isRefetchingAqi ? 'animate-spin text-indigo-400' : ''}`} />
-                <span>Refetch Live</span>
+                <RefreshCw className={`w-3 h-3 ${isRefetchingAqiLive ? 'animate-spin text-indigo-400' : ''}`} />
+                <span>Refetch AQI</span>
               </button>
-              {aqi?.available_providers && (
-                <span className="text-xs text-slate-400">
-                  Providers: {aqi.available_providers.join(', ')}
+              {aqiData && (
+                <span
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                    aqiData.status === 'live'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : aqiData.status === 'database'
+                      ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  }`}
+                >
+                  Status: {aqiData.status} ({aqiData.provider})
                 </span>
               )}
             </div>
           </div>
 
-          {aqiLoading ? (
-            <LoadingSkeleton count={2} height="h-32" />
-          ) : aqi && (aqi.global_weather?.length > 0 || aqi.who_annual?.length > 0) ? (
-            <div className="space-y-6">
-              {/* Sensor Records */}
-              {aqi.global_weather?.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <MetricCard
-                    label="Air Quality Index"
-                    value={aqi.global_weather[0].aqi_us_epa ?? aqi.global_weather[0].air_quality_index}
-                    status="fresh"
-                    subValue="EPA / Sensor AQI"
-                  />
-                  <MetricCard
-                    label="PM2.5 Concentration"
-                    value={aqi.global_weather[0].pm25}
-                    unit="µg/m³"
-                    status="fresh"
-                    subValue="Fine particulate matter"
-                  />
-                  <MetricCard
-                    label="PM10 Concentration"
-                    value={aqi.global_weather[0].pm10}
-                    unit="µg/m³"
-                    status="fresh"
-                    subValue="Respirable particulates"
-                  />
-                  <MetricCard
-                    label="Nitrogen Dioxide (NO2)"
-                    value={aqi.global_weather[0].no2 ?? aqi.global_weather[0].nitrogen_dioxide}
-                    unit="µg/m³"
-                    status="fresh"
-                    subValue="Combustion emissions"
-                  />
-                </div>
-              )}
+          {/* Warning banner when fallback database observation is used */}
+          {aqiData?.warning && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-300">
+                <strong>Data Provenance Notice:</strong> {aqiData.warning}
+              </div>
+            </div>
+          )}
 
-              {/* WHO Annual Ambient Air Quality History */}
-              {aqi.who_annual && aqi.who_annual.length > 0 && (
-                <div className="glass-panel p-6 rounded-2xl border border-slate-800">
-                  <h4 className="text-sm font-bold text-white mb-4">
-                    WHO Historical Air Quality Standards Benchmark
-                  </h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-left text-slate-300">
-                      <thead className="text-[11px] uppercase bg-slate-900/80 text-slate-400">
-                        <tr>
-                          <th className="py-2.5 px-4 rounded-l-lg">Year</th>
-                          <th className="py-2.5 px-4">PM2.5 Annual Mean</th>
-                          <th className="py-2.5 px-4">PM10 Annual Mean</th>
-                          <th className="py-2.5 px-4 rounded-r-lg">NO2 Annual Mean</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800">
-                        {aqi.who_annual.map((row, idx) => (
-                          <tr key={idx} className="hover:bg-slate-900/50">
-                            <td className="py-2.5 px-4 font-mono font-bold text-white">{row.year}</td>
-                            <td className="py-2.5 px-4">{(row.pm25_annual_mean_ug_m3 ?? row.pm25_annual_mean) ? `${row.pm25_annual_mean_ug_m3 ?? row.pm25_annual_mean} µg/m³` : '—'}</td>
-                            <td className="py-2.5 px-4">{(row.pm10_annual_mean_ug_m3 ?? row.pm10_annual_mean) ? `${row.pm10_annual_mean_ug_m3 ?? row.pm10_annual_mean} µg/m³` : '—'}</td>
-                            <td className="py-2.5 px-4">{row.no2_annual_mean ? `${row.no2_annual_mean} µg/m³` : '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+          {aqiLiveLoading ? (
+            <LoadingSkeleton count={2} height="h-32" />
+          ) : aqiData ? (
+            <div className="space-y-6">
+              {/* Pollutants Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                  label="PM2.5 (Fine Particulates)"
+                  value={aqiData.pollutants?.pm25}
+                  unit="µg/m³"
+                  status={aqiData.status === 'live' ? 'fresh' : 'database'}
+                  subValue={
+                    aqiData.pollutants?.pm25 !== undefined && aqiData.pollutants?.pm25 !== null
+                      ? aqiData.pollutants.pm25 > 15
+                        ? 'Exceeds WHO 24h Guide'
+                        : 'Within WHO 24h Guide'
+                      : undefined
+                  }
+                />
+                <MetricCard
+                  label="PM10 (Respirable)"
+                  value={aqiData.pollutants?.pm10}
+                  unit="µg/m³"
+                  status={aqiData.status === 'live' ? 'fresh' : 'database'}
+                  subValue="Coarse particulate matter"
+                />
+                <MetricCard
+                  label="NO₂ (Nitrogen Dioxide)"
+                  value={aqiData.pollutants?.no2}
+                  unit="µg/m³"
+                  status={aqiData.status === 'live' ? 'fresh' : 'database'}
+                  subValue="Traffic & combustion emissions"
+                />
+                <MetricCard
+                  label="O₃ (Ozone)"
+                  value={aqiData.pollutants?.o3}
+                  unit="µg/m³"
+                  status={aqiData.status === 'live' ? 'fresh' : 'database'}
+                  subValue="Photochemical oxidant"
+                />
+              </div>
+
+              {/* Provenance Box */}
+              <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                <h4 className="text-sm font-bold text-white">Air Quality Provenance Audit</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-slate-500 block mb-1">Provider Source</span>
+                    <span className="font-semibold text-slate-200">{aqiData.provider}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-slate-500 block mb-1">Observed At</span>
+                    <span className="font-mono text-slate-200">{aqiData.observed_at || 'Annual / Historical'}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-slate-500 block mb-1">Live Status Flag</span>
+                    <span className="font-semibold text-slate-200">{aqiData.is_live ? 'Yes (Live)' : 'No (Database/Historical)'}</span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
               <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
               <p className="text-sm text-slate-300 font-medium">No Air Quality Records Registered</p>
-              <p className="text-xs text-slate-500 mt-1">
-                Neither real-time sensor stations nor WHO annual records are present for this city.
-              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab 5: Cost of Living */}
+      {/* Tab 6: Cost of Living */}
       {activeTab === 'cost' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -679,7 +1086,10 @@ export const CityPage: React.FC = () => {
                   <h4 className="text-sm font-bold text-white mb-4">Detailed Expense Breakdown</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {cost.metrics.map((m, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center text-xs">
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center text-xs"
+                      >
                         <span className="text-slate-300 font-medium">{m.metric}</span>
                         <span className="text-amber-400 font-bold font-mono">
                           {m.value} {m.currency || ''}
@@ -694,100 +1104,265 @@ export const CityPage: React.FC = () => {
             <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
               <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
               <p className="text-sm text-slate-300 font-medium">Cost of Living Records Not Available</p>
-              <p className="text-xs text-slate-500 mt-1">
-                No verified cost or Numbeo consumer basket records exist for this city in MongoDB Atlas.
-              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab 6: Education & Universities */}
+      {/* Tab 7: Education Discovery */}
       {activeTab === 'education' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <GraduationCap className="w-5 h-5 text-purple-400" />
-                <span>Higher Education & Ranked Universities</span>
+                <span>Education Discovery & Institutional Ecosystem</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Accredited institutions paired with official QS and THE academic ranking histories.
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                <span className="px-2.5 py-0.5 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-bold tracking-wide">
+                  {education ? `${education.total.toLocaleString()} INDEXED INSTITUTIONS` : '—'}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold">
+                  Showing {education ? (education.displayed_count ?? education.institutions.length) : 0}
+                </span>
+                <span className="text-xs text-slate-400">
+                  • {education?.canonical_count || 0} canonical universities, {education?.community_mapped_count || 0} mapped colleges/schools
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => refetchUnis()}
-                disabled={isRefetchingUnis}
+                onClick={() => refetchEdu()}
+                disabled={isRefetchingEdu}
                 className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
-                title="Refetch universities"
+                title="Refetch education"
               >
-                <RefreshCw className={`w-3 h-3 ${isRefetchingUnis ? 'animate-spin text-indigo-400' : ''}`} />
+                <RefreshCw className={`w-3 h-3 ${isRefetchingEdu ? 'animate-spin text-indigo-400' : ''}`} />
                 <span>Refresh</span>
               </button>
-              <span className="text-xs text-slate-400">Total: {universities.length} Institutions</span>
             </div>
           </div>
 
-          {uniLoading ? (
-            <LoadingSkeleton count={3} height="h-24" />
-          ) : universities.length > 0 ? (
+          {/* Type Filter Chips */}
+          <div className="flex flex-wrap gap-2">
+            {EDU_FILTER_TYPES.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setSelectedEduType(f.key)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  selectedEduType === f.key
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Honest Disclaimer */}
+          {education?.disclaimer && (
+            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-400 text-xs">
+              <strong>Coverage Scope:</strong> {education.disclaimer}
+            </div>
+          )}
+
+          {/* Institutions Grid */}
+          {eduLoading ? (
+            <LoadingSkeleton count={4} height="h-28" />
+          ) : education?.institutions && education.institutions.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {universities.map((uni) => (
+              {education.institutions.map((inst) => (
                 <div
-                  key={uni.university_id}
+                  key={inst.institution_id}
                   className="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h4 className="text-base font-bold text-white">{uni.name}</h4>
-                      {uni.website && (
+                      <div>
+                        <h4 className="text-base font-bold text-white">{inst.name}</h4>
+                        <span className="text-[11px] font-semibold text-purple-300 uppercase tracking-wide">
+                          {inst.type}
+                        </span>
+                      </div>
+
+                      {/* Official Website or Unavailable */}
+                      {inst.website ? (
                         <a
-                          href={uni.website}
+                          href={inst.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1"
+                          className="px-2.5 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white text-xs font-semibold inline-flex items-center gap-1 transition-all shrink-0"
                         >
-                          <span>Website</span>
+                          <span>Official Website</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
+                      ) : (
+                        <span className="text-[11px] text-slate-500 italic shrink-0">Website unavailable</span>
                       )}
                     </div>
-                    <span className="text-xs text-slate-500 font-mono">
-                      ID: {uni.university_id} • {uni.country_iso2}
-                    </span>
+
+                    {inst.address && (
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-1">{inst.address}</p>
+                    )}
                   </div>
 
-                  {uni.rankings && uni.rankings.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap gap-2">
-                      {uni.rankings.map((r, rIdx) => (
-                        <span
-                          key={rIdx}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-purple-500/10 text-purple-300 border border-purple-500/20"
-                        >
-                          <span className="font-semibold">{r.ranking_metric}:</span>
-                          <span>#{r.rank} ({r.ranking_year})</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+                    <span className="font-mono">
+                      {inst.city}, {inst.country}
+                    </span>
+                    <span className="font-semibold text-slate-400">
+                      Source: {inst.provider}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
-              <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-300 font-medium">No Universities Indexed for this City</p>
-              <p className="text-xs text-slate-500 mt-1">
-                No ranked academic institutions are mapped directly to this city slug in MongoDB.
-              </p>
+              <GraduationCap className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+              <p className="text-sm text-slate-300 font-medium">No Institutions Matching "{selectedEduType}"</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab 7: Mobility & Transit */}
+      {/* Tab 8: Healthcare Discovery */}
+      {activeTab === 'healthcare' && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <HeartPulse className="w-5 h-5 text-rose-400" />
+                <span>Healthcare Discovery & Civic Medical Facilities</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {healthcare
+                  ? `Showing ${healthcare.total} mapped healthcare locations for ${city.name} across hospitals, clinics, dental, and pharmacies.`
+                  : 'Grounded OpenStreetMap Overpass medical locations'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => refetchHealth()}
+              disabled={isRefetchingHealth}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              title="Refetch healthcare"
+            >
+              <RefreshCw className={`w-3 h-3 ${isRefetchingHealth ? 'animate-spin text-indigo-400' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap gap-2">
+            {HEALTH_FILTER_CATEGORIES.map((cat) => (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={() => setSelectedHealthCategory(cat.key)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  selectedHealthCategory === cat.key
+                    ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <span>{cat.emoji}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Honest Disclaimer */}
+          {healthcare?.disclaimer && (
+            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-400 text-xs">
+              <strong>Registry Disclaimer:</strong> {healthcare.disclaimer}
+            </div>
+          )}
+
+          {/* Facilities Grid */}
+          {healthLoading ? (
+            <LoadingSkeleton count={4} height="h-28" />
+          ) : healthcare?.facilities && healthcare.facilities.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {healthcare.facilities.map((fac) => (
+                <div
+                  key={fac.facility_id}
+                  className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <h4 className="text-sm font-bold text-white line-clamp-1" title={fac.name}>
+                        {fac.name}
+                      </h4>
+                      <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+                        {fac.type}
+                      </span>
+                    </div>
+
+                    {fac.address && (
+                      <p className="text-xs text-slate-400 line-clamp-2 mt-1">{fac.address}</p>
+                    )}
+
+                    {/* Contact & Hours Info */}
+                    <div className="mt-2 space-y-1 text-[11px] text-slate-400">
+                      {fac.phone && (
+                        <div className="flex items-center gap-1.5 text-slate-300">
+                          <Phone className="w-3 h-3 text-slate-500" />
+                          <span>{fac.phone}</span>
+                        </div>
+                      )}
+                      {fac.opening_hours && (
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          <span>{fac.opening_hours}</span>
+                        </div>
+                      )}
+                      {fac.emergency && (
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-300 font-bold">
+                          Emergency Services Available
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+                    <span className="text-sky-400 font-semibold font-mono">
+                      {fac.distance_meters !== undefined && fac.distance_meters !== null
+                        ? fac.distance_meters > 1000
+                          ? `${(fac.distance_meters / 1000).toFixed(1)} km away`
+                          : `${Math.round(fac.distance_meters)}m away`
+                        : 'Proximity mapped'}
+                    </span>
+                    {fac.website ? (
+                      <a
+                        href={fac.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-1"
+                      >
+                        <span>Website</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="text-slate-600">No website</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
+              <Building2 className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+              <p className="text-sm text-slate-300 font-medium">No Facilities Recorded for "{selectedHealthCategory}"</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 9: Mobility & Transit */}
       {activeTab === 'transit' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -825,120 +1400,12 @@ export const CityPage: React.FC = () => {
             <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
               <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
               <p className="text-sm text-slate-300 font-medium">GTFS Transit Feed Unavailable</p>
-              <p className="text-xs text-slate-500 mt-1">
-                No active GTFS or GTFS-Realtime agency feed is registered in the public transit repository for this city.
-              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab 8: Healthcare & Amenities */}
-      {activeTab === 'healthcare' && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <span>Healthcare, Civic Amenities & POI Discovery</span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Live OpenStreetMap Overpass discovery bounded to a 4,000m radius around city coordinates.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => refetchPlaces()}
-                disabled={isRefetchingPlaces}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
-                title="Refetch amenities"
-              >
-                <RefreshCw className={`w-3 h-3 ${isRefetchingPlaces ? 'animate-spin text-indigo-400' : ''}`} />
-                <span>Refresh</span>
-              </button>
-              <ProvenanceTag source="OpenStreetMap Overpass API" confidence={0.95} />
-            </div>
-          </div>
-
-          {/* Category Chips Selector */}
-          <div className="flex flex-wrap gap-2">
-            {AMENITY_CATEGORIES.map((cat) => (
-              <button
-                key={cat.key}
-                type="button"
-                onClick={() => setSelectedAmenityCategory(cat.key)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                  selectedAmenityCategory === cat.key
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                }`}
-              >
-                <span>{cat.emoji}</span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Places Results */}
-          {placesLoading ? (
-            <LoadingSkeleton count={3} height="h-24" />
-          ) : places.length > 0 ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {places.map((place, idx) => (
-                  <div
-                    key={idx}
-                    className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <h4 className="text-sm font-bold text-white line-clamp-1" title={place.name || 'Amenity'}>
-                          {place.name || `Unnamed ${selectedAmenityCategory}`}
-                        </h4>
-                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                          {place.category || selectedAmenityCategory}
-                        </span>
-                      </div>
-                      {place.address && (
-                        <p className="text-xs text-slate-400 line-clamp-2 mt-1">
-                          {place.address}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="flex items-center gap-1 text-sky-400 font-semibold font-mono">
-                        <Navigation className="w-3 h-3" />
-                        {place.distance_meters !== undefined && place.distance_meters !== null
-                          ? place.distance_meters > 1000
-                            ? `${(place.distance_meters / 1000).toFixed(1)} km away`
-                            : `${Math.round(place.distance_meters)}m away`
-                          : 'Proximity mapped'}
-                      </span>
-                      {place.latitude && place.longitude && (
-                        <span className="font-mono text-[10px] text-slate-500">
-                          {place.latitude.toFixed(3)}°, {place.longitude.toFixed(3)}°
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800">
-              <Building2 className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-300 font-medium">No {selectedAmenityCategory} Amenities Recorded Nearby</p>
-              <p className="text-xs text-slate-500 mt-1">
-                The Overpass bounded query did not find {selectedAmenityCategory} nodes within 4,000 meters of this city center coordinate.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tab 9: Multi-Agent Intelligence Orchestrator */}
+      {/* Tab 10: Multi-Agent Intelligence */}
       {activeTab === 'agents' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">

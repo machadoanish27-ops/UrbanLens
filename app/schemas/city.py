@@ -44,6 +44,31 @@ class CityListItem(BaseModel):
     longitude: float | None = None
 
 
+class PopulationDensityInfo(BaseModel):
+    """Population density specification and provenance."""
+
+    status: str = "unavailable"
+    value: float | None = None
+    unit: str = "people/km²"
+    area_km2: float | None = None
+    source: str | None = None
+    level: str = "city"
+    national_density_value: float | None = None
+    national_density_period: int | None = None
+    national_density_source: str | None = "country_metrics"
+
+
+from app.schemas.country import CountryLanguageInfo
+
+
+class CityCurrencyInfo(BaseModel):
+    """Currency specification for a city's national context."""
+
+    code: str
+    symbol: str
+    name: str
+
+
 class CityDetail(CityListItem):
     """Detailed city representation including aliases and provider cross-references."""
 
@@ -55,6 +80,10 @@ class CityDetail(CityListItem):
     identity_relationship: str | None = None
     source_id: str | None = None
     mapping_version: str | None = None
+    area_km2: float | None = None
+    population_density: PopulationDensityInfo | None = None
+    languages: CountryLanguageInfo | None = None
+    currency: CityCurrencyInfo | None = None
     aliases: list[CityAliasItem] = Field(default_factory=list)
     provider_identities: list[CityProviderIdentityItem] = Field(default_factory=list)
 

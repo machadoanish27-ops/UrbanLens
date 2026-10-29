@@ -10,6 +10,8 @@ from app.db.repositories.weather import WeatherRepository
 from app.db.repositories.air_quality import AirQualityRepository
 from app.db.repositories.cost_of_living import CostOfLivingRepository
 from app.db.repositories.university import UniversityRepository
+from app.data.languages import get_country_languages
+from app.data.currencies import get_currency_for_country
 
 
 class CityService:
@@ -71,6 +73,55 @@ class CityService:
 
         city["aliases"] = aliases
         city["provider_identities"] = identities
+
+        # Resolve population density (distinguishing known vs unavailable density)
+        pop = city.get("population")
+        area = city.get("area_km2") or city.get("land_area_km2")
+        
+        country_id = city.get("country_id")
+        nat_density_val = None
+        nat_density_period = None
+        if country_id:
+            m_list = self.country_repo.get_metrics(country_id, metric="Population Density")
+            if m_list:
+                latest_m = m_list[0]
+                nat_density_val = latest_m.get("value")
+                nat_density_period = latest_m.get("period")
+
+        if pop is not None and area is not None and float(area) > 0:
+            density_val = round(float(pop) / float(area), 2)
+            city["population_density"] = {
+                "status": "available",
+                "value": density_val,
+                "unit": "people/km²",
+                "area_km2": float(area),
+                "source": "canonical_city_record",
+                "level": "city",
+                "national_density_value": nat_density_val,
+                "national_density_period": nat_density_period,
+                "national_density_source": "country_metrics",
+            }
+            city["area_km2"] = float(area)
+        else:
+            city["population_density"] = {
+                "status": "unavailable",
+                "value": None,
+                "unit": "people/km²",
+                "area_km2": None,
+                "source": None,
+                "level": "city",
+                "national_density_value": nat_density_val,
+                "national_density_period": nat_density_period,
+                "national_density_source": "country_metrics" if nat_density_val else None,
+            }
+            city["area_km2"] = None
+
+        # Authoritative country-level linguistic and cultural metadata
+        city["languages"] = get_country_languages(city.get("country_iso2") or country_id, iso2_hint=city.get("country_iso2"))
+
+        # Authoritative national currency metadata
+        city["currency"] = get_currency_for_country(city.get("country_iso2"))
+
         return city
 
     def get_city_overview(self, city_id: str) -> dict[str, Any]:

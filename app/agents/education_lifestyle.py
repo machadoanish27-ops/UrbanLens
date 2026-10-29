@@ -69,20 +69,33 @@ class EducationLifestyleAgent(BaseAgent):
         except Exception:
             univ_items, total_univs = ([], 0)
 
+        languages = city.get("languages") or {}
+
+        sources: list[SourceProvenance] = []
+        warnings: list[str] = []
+
         if total_univs == 0:
             return self.create_unavailable_result(
                 f"No registered universities found in academic directory for country '{country_iso2 or country_id}'.",
                 missing_data=("universities",),
             )
 
-        sources: list[SourceProvenance] = [
+        sources.append(
             SourceProvenance(
                 source_id="universities",
                 provider="canonical_university_registry",
                 confidence=1.0,
             )
-        ]
-        warnings: list[str] = []
+        )
+
+        if languages.get("status") == "available":
+            sources.append(
+                SourceProvenance(
+                    source_id="un_iso_languages",
+                    provider=languages.get("source") or "ISO-639 / UN Linguistic Statistics",
+                    confidence=1.0,
+                )
+            )
 
         sample_institutions = []
         for u in univ_items:
@@ -129,10 +142,15 @@ class EducationLifestyleAgent(BaseAgent):
             except Exception:
                 pass
 
+        lang_part = ""
+        if languages and languages.get("status") == "available":
+            officials = ", ".join(languages.get("official_languages", []))
+            lang_part = f" Official/Spoken languages: {officials} (country-level)."
+
         summary = (
             f"Academic ecosystem: {total_univs} higher education institutions cataloged. "
             f"Top sample: {sample_institutions[0]['name'] if sample_institutions else 'None'}. "
-            f"Cultural POIs located: {len(cultural_places)} libraries/cultural venues."
+            f"Cultural POIs located: {len(cultural_places)} libraries/cultural venues.{lang_part}"
         )
 
         # Retrieve grounded knowledge evidence
@@ -160,9 +178,10 @@ class EducationLifestyleAgent(BaseAgent):
                 "country_iso2": country_iso2,
                 "total_country_institutions": total_univs,
                 "sample_institutions": sample_institutions,
+                "languages": languages,
                 "cultural_poi_count": len(cultural_places),
                 "cultural_pois": cultural_places,
-                "database_derived_fields": ["total_country_institutions", "sample_institutions", "rankings"],
+                "database_derived_fields": ["total_country_institutions", "sample_institutions", "rankings", "languages"],
                 "live_derived_fields": ["cultural_pois"],
             },
             sources=tuple(sources),

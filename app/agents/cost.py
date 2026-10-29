@@ -88,11 +88,9 @@ class CostAgent(BaseAgent):
             try:
                 city = self.city_service.get_city_details(request.city_id)
                 iso2 = (city.get("country_iso2") or "").upper()
-                currency_map = {
-                    "IN": "INR", "JP": "JPY", "GB": "GBP", "DE": "EUR", "FR": "EUR",
-                    "AU": "AUD", "CA": "CAD", "SG": "SGD", "AE": "AED", "BR": "BRL",
-                }
-                target_currency = currency_map.get(iso2, "EUR")
+                from app.data.currencies import get_currency_for_country
+                curr_dict = get_currency_for_country(iso2)
+                target_currency = curr_dict.get("code", "USD")
             except Exception:
                 pass
 
@@ -102,14 +100,22 @@ class CostAgent(BaseAgent):
             try:
                 fx_res = await self.currency_service.convert_currency("USD", target_currency, amount=1.0)
                 fx_meta = fx_res.get("meta", {})
-                if fx_meta.get("status") == "fresh" and fx_res.get("conversion"):
-                    live_fx = fx_res["conversion"]
+                fx_status = fx_res.get("status") or fx_meta.get("status")
+                conv_dict = fx_res.get("conversion") if isinstance(fx_res.get("conversion"), dict) else {}
+                rate = fx_res.get("rate") or conv_dict.get("rate")
+                if fx_status in ("fresh", "cached", "live") and rate is not None:
+                    live_fx = fx_res.get("conversion") or {
+                        "from_currency": "USD",
+                        "to_currency": target_currency,
+                        "rate": rate,
+                        "converted_amount": fx_res.get("converted_amount") or conv_dict.get("converted_amount") or rate,
+                    }
                     sources.append(
                         SourceProvenance(
                             source_id="live_fx_rates",
-                            provider=fx_meta.get("provider", "frankfurter"),
-                            observed_at=str(fx_meta.get("observed_at")) if fx_meta.get("observed_at") else None,
-                            confidence=0.95,
+                            provider=fx_res.get("provider") or fx_meta.get("provider", "frankfurter"),
+                            observed_at=str(fx_res.get("observed_at") or fx_meta.get("observed_at")) if (fx_res.get("observed_at") or fx_meta.get("observed_at")) else None,
+                            confidence=0.95 if fx_status == "fresh" else 0.90,
                         )
                     )
                 else:

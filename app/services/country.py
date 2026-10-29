@@ -5,6 +5,7 @@ from pymongo.database import Database
 
 from app.core.exceptions import ResourceNotFoundException
 from app.db.repositories.country import CountryRepository
+from app.data.languages import get_country_languages
 
 
 class CountryService:
@@ -27,7 +28,13 @@ class CountryService:
         country = self.country_repo.get_by_country_id(country_id)
         if not country:
             raise ResourceNotFoundException("country", country_id)
+        country["languages"] = get_country_languages(country.get("iso2") or country.get("country_id"), iso2_hint=country.get("iso2"))
         return country
+
+    def get_country_languages(self, country_id: str) -> dict[str, Any]:
+        """Fetch authoritative language metadata for a country."""
+        country = self.get_country(country_id)
+        return get_country_languages(country.get("iso2") or country.get("country_id"), iso2_hint=country.get("iso2"))
 
     def get_country_metrics(
         self,
