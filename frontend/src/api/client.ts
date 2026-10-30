@@ -21,6 +21,10 @@ import type {
   CityHealthcareResponse,
   CurrencyConversionResponse,
   LiveAirQualityResponse,
+  RouteResponse,
+  KnowledgeChunkItem,
+  KnowledgeStatsResponse,
+  CountryItem,
 } from '../types/api';
 
 const API_BASE_URL = (
@@ -269,6 +273,50 @@ export const urbanLensApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+
+  // Knowledge / RAG
+  searchKnowledge: async (params: {
+    query: string;
+    city?: string;
+    country?: string;
+    category?: string;
+    limit?: number;
+  }): Promise<ApiResponse<KnowledgeChunkItem[]>> => {
+    const qs = new URLSearchParams();
+    qs.set('query', params.query);
+    if (params.city) qs.set('city', params.city);
+    if (params.country) qs.set('country', params.country);
+    if (params.category) qs.set('category', params.category);
+    if (params.limit) qs.set('limit', String(params.limit));
+    return request<KnowledgeChunkItem[]>(`/api/v1/knowledge/search?${qs.toString()}`);
+  },
+
+  getKnowledgeStats: async (): Promise<ApiResponse<KnowledgeStatsResponse>> => {
+    return request<KnowledgeStatsResponse>('/api/v1/knowledge/stats');
+  },
+
+  // Routing
+  calculateRoute: async (params: {
+    origin_lat: number;
+    origin_lon: number;
+    dest_lat: number;
+    dest_lon: number;
+    profile?: 'driving' | 'walking' | 'cycling';
+  }): Promise<ApiResponse<RouteResponse>> => {
+    const qs = new URLSearchParams({
+      origin_lat: String(params.origin_lat),
+      origin_lon: String(params.origin_lon),
+      dest_lat: String(params.dest_lat),
+      dest_lon: String(params.dest_lon),
+      profile: params.profile || 'driving',
+    });
+    return request<RouteResponse>(`/api/v1/routes?${qs.toString()}`);
+  },
+
+  // Countries
+  getCountries: async (): Promise<ApiResponse<CountryItem[]>> => {
+    return request<CountryItem[]>('/api/v1/countries');
   },
 };
 

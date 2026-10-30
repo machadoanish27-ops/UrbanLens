@@ -43,7 +43,22 @@ class Settings(BaseSettings):
     NOMINATIM_USER_AGENT: str = "UrbanLens/0.1.0 (urbanlens@urbanlens.local)"
     OSRM_BASE_URL: str = "http://router.project-osrm.org"
     OVERPASS_BASE_URL: str = "https://overpass-api.de/api/interpreter"
+    OVERPASS_FALLBACK_URLS: list[str] = [
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://lz4.overpass-api.de/api/interpreter",
+    ]
+    OVERPASS_MAX_RETRIES: int = 2
+    OVERPASS_COOLDOWN_SECONDS: float = 60.0
     GTFS_FEEDS: dict[str, str] = {}
+
+    # Distributed Cache Layer (Redis + In-Memory Fallback)
+    REDIS_URL: str | None = None
+    REDIS_ENABLED: bool = False
+    REDIS_CONNECT_TIMEOUT_MS: int = 1500
+    REDIS_SOCKET_TIMEOUT_MS: int = 1500
+    CACHE_DEFAULT_TTL_SECONDS: float = 300.0
+    CACHE_STALE_TTL_MULTIPLIER: float = 4.0
 
     # RAG Knowledge Layer
     EMBEDDING_PROVIDER: str = "hash"
@@ -60,6 +75,20 @@ class Settings(BaseSettings):
     LLM_TIMEOUT_SECONDS: float = 30.0
     GROQ_API_KEY: str | None = None
     LLM_CACHE_TTL_SECONDS: float = 300.0
+
+    # Secondary LLM Provider (Failover Redundancy)
+    SECONDARY_LLM_ENABLED: bool = False
+    SECONDARY_LLM_PROVIDER: str = "secondary"
+    SECONDARY_LLM_BASE_URL: str = "https://api.openai.com/v1"
+    SECONDARY_LLM_API_KEY: str | None = None
+    SECONDARY_LLM_MODEL: str = "gpt-4o-mini"
+    SECONDARY_LLM_TIMEOUT_SECONDS: float = 25.0
+
+    # Rate Limiting
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_DEFAULT: str = "60/minute"
+    RATE_LIMIT_INTELLIGENCE: str = "15/minute"
+    RATE_LIMIT_LIVE_PROVIDERS: str = "30/minute"
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),
@@ -113,6 +142,23 @@ class Settings(BaseSettings):
         if len(key) <= 8:
             return "***"
         return f"{key[:4]}...{key[-4:]}"
+
+    @property
+    def safe_secondary_llm_api_key(self) -> str:
+        """Return redacted representation of secondary LLM API key for logging."""
+        if not self.SECONDARY_LLM_API_KEY:
+            return "not_configured"
+        key = self.SECONDARY_LLM_API_KEY.strip()
+        if len(key) <= 8:
+            return "***"
+        return f"{key[:4]}...{key[-4:]}"
+
+    @property
+    def safe_redis_url(self) -> str:
+        """Return Redis URL with credentials redacted."""
+        if not self.REDIS_URL:
+            return "not_configured"
+        return re.sub(r":([^@]+)@", ":***@", self.REDIS_URL)
 
 
 settings = Settings()

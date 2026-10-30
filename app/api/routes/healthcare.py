@@ -1,8 +1,10 @@
 """Healthcare discovery endpoints."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pymongo.database import Database
 
+from app.core.config import settings
+from app.core.rate_limit import limiter
 from app.db.client import get_db
 from app.schemas.common import ApiResponse, ResponseMeta
 from app.schemas.healthcare import CityHealthcareResponse
@@ -16,7 +18,9 @@ router = APIRouter(prefix="/cities", tags=["Healthcare Discovery"])
     response_model=ApiResponse[CityHealthcareResponse],
     summary="Discover healthcare facilities in and around a city",
 )
+@limiter.limit(settings.RATE_LIMIT_LIVE_PROVIDERS)
 async def get_city_healthcare(
+    request: Request,
     city_id: str,
     category: str | None = Query(None, description="Filter category: hospital, clinic, dentist, pharmacy"),
     radius: int = Query(5000, ge=500, le=25000, description="Search radius in meters"),

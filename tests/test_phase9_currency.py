@@ -190,8 +190,11 @@ def test_currency_conversion_unavailable(mock_db):
     asyncio.run(run())
 
 
-def test_currency_api_endpoint_convert():
+def test_currency_api_endpoint_convert(mock_db):
     """Verify /api/v1/currency/convert HTTP endpoint returns structured response."""
+    from app.db.client import get_db
+    app.dependency_overrides[get_db] = lambda: mock_db
+
     async def run():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -205,18 +208,27 @@ def test_currency_api_endpoint_convert():
             assert data["rate"] == 1.0
             assert data["converted_amount"] == 100.0
 
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    finally:
+        app.dependency_overrides.clear()
 
 
-def test_currency_api_endpoint_invalid_code():
+def test_currency_api_endpoint_invalid_code(mock_db):
     """Verify /api/v1/currency/convert rejects invalid currency codes with HTTP 422."""
+    from app.db.client import get_db
+    app.dependency_overrides[get_db] = lambda: mock_db
+
     async def run():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/v1/currency/convert", params={"base": "INVALID_TOOLONG", "quote": "USD"})
             assert resp.status_code == 422
 
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_currency_conversion_aed_secondary_provider(mock_db):

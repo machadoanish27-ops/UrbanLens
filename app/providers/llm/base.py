@@ -27,6 +27,8 @@ class LLMResponse:
     latency_ms: float = 0.0
     status: LLMStatus = LLMStatus.SUCCESS
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    error_category: str = "none"
+    fallback_used: bool = False
 
 
 class BaseLLMProvider(ABC):

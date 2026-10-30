@@ -1,8 +1,10 @@
 """Places and points of interest endpoints."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pymongo.database import Database
 
+from app.core.config import settings
+from app.core.rate_limit import limiter
 from app.db.client import get_db
 from app.schemas.common import ApiResponse, ResponseMeta
 from app.schemas.places import PlacesSearchResponse
@@ -16,7 +18,9 @@ router = APIRouter(prefix="/places", tags=["Places"])
     response_model=ApiResponse[PlacesSearchResponse],
     summary="Search category-based POIs via OpenStreetMap Overpass",
 )
+@limiter.limit(settings.RATE_LIMIT_LIVE_PROVIDERS)
 async def search_places(
+    request: Request,
     lat: float = Query(..., ge=-90.0, le=90.0, description="Center latitude"),
     lon: float = Query(..., ge=-180.0, le=180.0, description="Center longitude"),
     category: str = Query("hospital", description="Amenity category (e.g. hospital, school, university, pharmacy, supermarket, park)"),

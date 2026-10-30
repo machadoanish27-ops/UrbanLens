@@ -14,6 +14,9 @@ export interface MapMarkerItem {
   phone?: string;
 }
 
+// Runtime value export to prevent module resolution errors if imported without 'type'
+export const MapMarkerItem = {};
+
 interface InteractiveMapProps {
   latitude: number;
   longitude: number;
@@ -217,7 +220,7 @@ export const InteractiveMap: FC<InteractiveMapProps> = ({
       });
 
       const poiMarker = L.marker([m.lat, m.lon], { icon: poiIcon });
-      
+
       const popupHtml = `
         <div style="font-size: 12px; line-height: 1.4; max-width: 240px; font-family: system-ui, sans-serif;">
           <strong style="color: #f1f5f9; font-size: 13px; display: block; margin-bottom: 2px;">${m.title}</strong>
@@ -293,4 +296,3 @@ export const InteractiveMap: FC<InteractiveMapProps> = ({
     </div>
   );
 };
-

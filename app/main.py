@@ -17,7 +17,9 @@ from app.core.exceptions import (
     urbanlens_exception_handler,
 )
 from app.core.logging import configure_logging, get_logger
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.db.client import MongoClientManager
+from slowapi.errors import RateLimitExceeded
 
 configure_logging()
 logger = get_logger("main")
@@ -40,6 +42,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Register rate limiter on app state
+app.state.limiter = limiter
 
 # Enable CORS for frontend applications (Vite dev server, localhost)
 app.add_middleware(
@@ -70,6 +75,7 @@ async def add_process_time_and_request_id(request: Request, call_next):
 
 
 # Register exception handlers
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 app.add_exception_handler(UrbanLensException, urbanlens_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 

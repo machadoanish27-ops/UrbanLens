@@ -23,6 +23,8 @@ class LLMMetadata(BaseModel):
     latency_ms: float = 0.0
     cached: bool = False
     usage: dict[str, int] | None = None
+    fallback_used: bool = False
+    error_category: str = "none"
 
 
 class LLMIntelligenceResponse(BaseModel):

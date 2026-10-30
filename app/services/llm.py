@@ -75,9 +75,19 @@ class LLMService:
     def __init__(
         self,
         provider: BaseLLMProvider | None = None,
-        cache: InMemoryTTLCache | None = None,
+        secondary_provider: BaseLLMProvider | None = None,
+        cache: Any | None = None,
     ) -> None:
         self.provider = provider or get_llm_provider()
+        if secondary_provider is not None:
+            self.secondary_provider = secondary_provider
+        elif settings.SECONDARY_LLM_ENABLED or settings.SECONDARY_LLM_API_KEY:
+            try:
+                self.secondary_provider = get_llm_provider("secondary")
+            except Exception:
+                self.secondary_provider = None
+        else:
+            self.secondary_provider = None
         self.cache = cache or service_cache
 
     def build_grounding_context(
@@ -205,8 +215,10 @@ class LLMService:
         query: str,
         reason: str,
         latency_ms: float = 0.0,
-        provider_name: str = "deterministic_fallback",
-        model_name: str = "none",
+        provider_name: str = "deterministic_grounded_engine",
+        model_name: str = "grounded-synthesis-v1",
+        error_category: str = "none",
+        fallback_used: bool = True,
     ) -> LLMAskResponse:
         """Construct grounded fallback response when LLM is unavailable or unparseable."""
         city_name = aggregated.location.get("name") or aggregated.city_id
@@ -261,6 +273,8 @@ class LLMService:
                 status="fallback",
                 latency_ms=latency_ms,
                 cached=False,
+                fallback_used=fallback_used,
+                error_category=error_category,
             ),
         )
 
@@ -313,7 +327,7 @@ class LLMService:
 
         system_prompt, user_prompt = self.build_grounding_context(aggregated, query)
 
-        # Execute LLM generation
+        # 1. Execute Primary LLM generation
         llm_response = await self.provider.generate(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
@@ -323,31 +337,50 @@ class LLMService:
 
         provider_name = getattr(self.provider, "provider", "groq")
         model_name = getattr(self.provider, "model", "unknown")
+        primary_failed = (llm_response.status != LLMStatus.SUCCESS or not llm_response.text.strip())
+        primary_error_category = getattr(llm_response, "error_category", "error")
 
-        # Handle provider unavailability, errors, or timeouts
-        if llm_response.status != LLMStatus.SUCCESS or not llm_response.text.strip():
+        parsed_dict = None
+        if not primary_failed:
+            parsed_dict = self._extract_json(llm_response.text)
+            if not parsed_dict:
+                primary_failed = True
+                primary_error_category = "invalid_json"
+
+        # 2. If Primary failed, attempt Secondary LLM provider (if configured)
+        used_secondary = False
+        if primary_failed and self.secondary_provider:
+            sec_response = await self.secondary_provider.generate(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=settings.LLM_TEMPERATURE,
+                max_tokens=settings.LLM_MAX_TOKENS,
+            )
+            if sec_response.status == LLMStatus.SUCCESS and sec_response.text.strip():
+                sec_dict = self._extract_json(sec_response.text)
+                if sec_dict:
+                    parsed_dict = sec_dict
+                    provider_name = getattr(self.secondary_provider, "provider", "secondary_llm")
+                    model_name = getattr(self.secondary_provider, "model", "secondary")
+                    llm_response = sec_response
+                    primary_failed = False
+                    used_secondary = True
+
+        # 3. If both LLMs failed, execute Grounded Deterministic Fallback
+        if primary_failed or not parsed_dict:
             reason = llm_response.warnings[0] if llm_response.warnings else llm_response.status.value
             return self._build_deterministic_fallback(
                 aggregated=aggregated,
                 query=query,
                 reason=reason,
                 latency_ms=llm_response.latency_ms,
-                provider_name=provider_name,
-                model_name=model_name,
+                provider_name="deterministic_grounded_engine",
+                model_name="grounded-synthesis-v1",
+                error_category=primary_error_category,
+                fallback_used=True,
             )
 
         # Parse structured output
-        parsed_dict = self._extract_json(llm_response.text)
-        if not parsed_dict:
-            return self._build_deterministic_fallback(
-                aggregated=aggregated,
-                query=query,
-                reason="Invalid JSON output from model",
-                latency_ms=llm_response.latency_ms,
-                provider_name=provider_name,
-                model_name=model_name,
-            )
-
         try:
             parsed = LLMIntelligenceResponse(**parsed_dict)
         except Exception as validation_err:
@@ -356,8 +389,10 @@ class LLMService:
                 query=query,
                 reason=f"Structured schema validation error: {str(validation_err)}",
                 latency_ms=llm_response.latency_ms,
-                provider_name=provider_name,
-                model_name=model_name,
+                provider_name="deterministic_grounded_engine",
+                model_name="grounded-synthesis-v1",
+                error_category="schema_validation_error",
+                fallback_used=True,
             )
 
         # Merge sources and warnings
@@ -367,6 +402,8 @@ class LLMService:
                 all_sources.append(s.source_id)
 
         all_warnings = list(dict.fromkeys(list(parsed.warnings) + list(aggregated.warnings)))
+        if used_secondary:
+            all_warnings.append(f"Primary LLM unavailable ({primary_error_category}); answered by secondary LLM.")
 
         evidence_used = list(parsed.evidence_used)
         if not evidence_used and aggregated.knowledge_evidence:
@@ -414,6 +451,8 @@ class LLMService:
                 latency_ms=llm_response.latency_ms,
                 cached=False,
                 usage=llm_response.usage,
+                fallback_used=used_secondary,
+                error_category=primary_error_category if used_secondary else "none",
             ),
         )
 

@@ -19,6 +19,10 @@ import type {
   CityHealthcareResponse,
   CurrencyConversionResponse,
   LiveAirQualityResponse,
+  RouteResponse,
+  KnowledgeChunkItem,
+  KnowledgeStatsResponse,
+  CountryItem,
 } from '../types/api';
 
 export const QUERY_KEYS = {
@@ -39,6 +43,10 @@ export const QUERY_KEYS = {
   currencies: ['currencies'] as const,
   places: (lat: number, lon: number, category?: string) => ['places', lat, lon, category] as const,
   intelligence: (cityId: string, q?: string) => ['city', cityId, 'intelligence', q] as const,
+  knowledge: (params: Record<string, any>) => ['knowledge', params] as const,
+  knowledgeStats: ['knowledge', 'stats'] as const,
+  route: (params: Record<string, any>) => ['route', params] as const,
+  countries: ['countries'] as const,
 };
 
 export function useHealth() {
@@ -214,3 +222,50 @@ export function useCityHealthcare(cityId: string, category?: string, radius: num
   });
 }
 
+export function useKnowledgeSearch(params: {
+  query: string;
+  city?: string;
+  country?: string;
+  category?: string;
+  limit?: number;
+}) {
+  return useQuery<ApiResponse<KnowledgeChunkItem[]>, ApiError>({
+    queryKey: QUERY_KEYS.knowledge(params),
+    queryFn: () => urbanLensApi.searchKnowledge(params),
+    enabled: Boolean(params.query && params.query.trim().length > 0),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useKnowledgeStats() {
+  return useQuery<ApiResponse<KnowledgeStatsResponse>, ApiError>({
+    queryKey: QUERY_KEYS.knowledgeStats,
+    queryFn: () => urbanLensApi.getKnowledgeStats(),
+    staleTime: 15 * 60_000,
+  });
+}
+
+export function useRouteCalculation(params: {
+  origin_lat: number;
+  origin_lon: number;
+  dest_lat: number;
+  dest_lon: number;
+  profile?: 'driving' | 'walking' | 'cycling';
+}) {
+  return useQuery<ApiResponse<RouteResponse>, ApiError>({
+    queryKey: QUERY_KEYS.route(params),
+    queryFn: () => urbanLensApi.calculateRoute(params),
+    enabled: Boolean(
+      params.origin_lat && params.origin_lon && params.dest_lat && params.dest_lon
+    ),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useCountries() {
+  return useQuery<ApiResponse<CountryItem[]>, ApiError>({
+    queryKey: QUERY_KEYS.countries,
+    queryFn: () => urbanLensApi.getCountries(),
+    staleTime: 30 * 60_000,
+  });
+}

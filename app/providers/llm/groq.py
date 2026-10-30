@@ -53,6 +53,7 @@ class GroqProvider(BaseLLMProvider):
                 latency_ms=(time.perf_counter() - start) * 1000,
                 status=LLMStatus.UNAVAILABLE,
                 warnings=("Groq API key not configured. LLM synthesis unavailable.",),
+                error_category="not_configured",
             )
 
         try:
@@ -72,6 +73,7 @@ class GroqProvider(BaseLLMProvider):
                 latency_ms=(time.perf_counter() - start) * 1000,
                 status=LLMStatus.UNAVAILABLE,
                 warnings=("groq python SDK not installed. Run 'pip install groq'.",),
+                error_category="sdk_missing",
             )
 
         client = AsyncGroq(api_key=self.api_key.strip(), timeout=self.timeout_seconds)
@@ -135,6 +137,7 @@ class GroqProvider(BaseLLMProvider):
                 latency_ms=latency,
                 status=LLMStatus.UNAVAILABLE,
                 warnings=(f"Groq authentication failure: {safe_msg}",),
+                error_category="auth_error",
             )
 
         except RateLimitError as rate_err:
@@ -147,6 +150,7 @@ class GroqProvider(BaseLLMProvider):
                 latency_ms=latency,
                 status=LLMStatus.ERROR,
                 warnings=(f"Groq rate limit exceeded: {safe_msg}",),
+                error_category="rate_limit",
             )
 
         except (APITimeoutError, asyncio.TimeoutError) as timeout_err:
@@ -158,6 +162,7 @@ class GroqProvider(BaseLLMProvider):
                 latency_ms=latency,
                 status=LLMStatus.TIMEOUT,
                 warnings=(f"Groq request timed out after {self.timeout_seconds}s.",),
+                error_category="timeout",
             )
 
         except APIStatusError as status_err:
@@ -170,6 +175,7 @@ class GroqProvider(BaseLLMProvider):
                 latency_ms=latency,
                 status=LLMStatus.ERROR,
                 warnings=(f"Groq status error: {safe_msg}",),
+                error_category="status_error",
             )
 
         except Exception as exc:
@@ -182,4 +188,5 @@ class GroqProvider(BaseLLMProvider):
                 latency_ms=latency,
                 status=LLMStatus.ERROR,
                 warnings=(f"Groq unexpected error: {safe_msg}",),
+                error_category="unexpected_error",
             )

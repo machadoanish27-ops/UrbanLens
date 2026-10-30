@@ -1,8 +1,10 @@
 """Education discovery endpoints."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pymongo.database import Database
 
+from app.core.config import settings
+from app.core.rate_limit import limiter
 from app.db.client import get_db
 from app.schemas.common import ApiResponse, ResponseMeta
 from app.schemas.education import CityEducationResponse
@@ -16,7 +18,9 @@ router = APIRouter(prefix="/cities", tags=["Education Discovery"])
     response_model=ApiResponse[CityEducationResponse],
     summary="Discover educational institutions in and around a city",
 )
+@limiter.limit(settings.RATE_LIMIT_LIVE_PROVIDERS)
 async def get_city_education(
+    request: Request,
     city_id: str,
     type: str | None = Query(None, description="Filter by institution type (e.g. University, College, School, Medical College)"),
     page: int = Query(1, ge=1, description="Page number"),

@@ -1,8 +1,10 @@
 """Intelligence, domain agents, and orchestrator endpoints."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pymongo.database import Database
 
+from app.core.config import settings
+from app.core.rate_limit import limiter
 from app.db.client import get_db
 from app.schemas.common import ApiResponse, ResponseMeta
 from app.schemas.intelligence import (
@@ -158,15 +160,16 @@ async def get_city_intelligence(
     response_model=ApiResponse[LLMAskResponse],
     summary="Ask natural language question grounded in multi-agent intelligence and RAG evidence",
 )
+@limiter.limit(settings.RATE_LIMIT_INTELLIGENCE)
 async def ask_intelligence(
-    request: LLMAskRequest,
+    request: Request,
+    payload: LLMAskRequest,
     database: Database = Depends(get_db),
 ) -> ApiResponse[LLMAskResponse]:
     """Execute multi-agent retrieval and synthesize grounded response via LLM reasoning."""
     service = IntelligenceService(database)
-    response = await service.ask_async(query=request.query, city_id=request.city_id)
+    response = await service.ask_async(query=payload.query, city_id=payload.city_id)
     return ApiResponse(
         data=response,
         meta=ResponseMeta(source="urbanlens_groq_llm"),
     )
-

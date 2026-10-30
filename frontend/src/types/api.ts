@@ -469,3 +469,49 @@ export interface CityHealthcareResponse {
   meta: Record<string, any>;
 }
 
+export interface RouteResponse {
+  origin: { latitude: number; longitude: number };
+  destination: { latitude: number; longitude: number };
+  route: {
+    origin_lat: number;
+    origin_lon: number;
+    dest_lat: number;
+    dest_lon: number;
+    distance_meters: number;
+    distance_km: number;
+    duration_seconds: number;
+    duration_minutes: number;
+    profile: string;
+  };
+  meta: Record<string, any>;
+}
+
+export interface KnowledgeChunkItem {
+  chunk_id: string;
+  document_id: string;
+  title: string;
+  city?: string | null;
+  country?: string | null;
+  category: string;
+  text: string;
+  authority_level?: string;
+  source?: string;
+  source_url?: string | null;
+  score?: number;
+  freshness_date?: string | null;
+}
+
+export interface KnowledgeStatsResponse {
+  total_documents: number;
+  total_chunks: number;
+  categories: Record<string, number>;
+  cities_covered: string[];
+}
+
+export interface CountryItem {
+  country_id: string;
+  iso_code?: string;
+  name: string;
+  currency_code?: string | null;
+  capital?: string | null;
+}

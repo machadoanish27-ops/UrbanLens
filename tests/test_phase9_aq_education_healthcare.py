@@ -245,9 +245,20 @@ def test_healthcare_discovery_categories_and_attribution(mock_db):
     asyncio.run(run())
 
 
-def test_education_and_healthcare_api_endpoints():
+def test_education_and_healthcare_api_endpoints(mock_db):
     """Verify /api/v1/cities/{city_id}/education and /healthcare HTTP endpoints."""
+    from app.db.client import get_db
+    app.dependency_overrides[get_db] = lambda: mock_db
+
     async def run():
+        mock_db["cities"].documents.append({
+            "city_id": "city_1356226629",
+            "name": "Mumbai",
+            "country_id": "India",
+            "country_iso2": "IN",
+            "latitude": 19.0760,
+            "longitude": 72.8777,
+        })
         mock_places = ProviderResponse(
             meta=LiveMetadata(status=LiveStatus.FRESH, provider="openstreetmap_overpass", source="https://overpass-api.de"),
             data=[],
@@ -277,7 +288,10 @@ def test_education_and_healthcare_api_endpoints():
                 assert "air_quality" in aq_json["data"]
                 assert "meta" in aq_json["data"]
 
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_education_total_greater_than_displayed_limit(mock_db):
