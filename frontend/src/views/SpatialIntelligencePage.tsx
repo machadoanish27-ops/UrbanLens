@@ -188,9 +188,15 @@ export const SpatialIntelligencePage: React.FC = () => {
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : currentCity.zones && currentCity.zones.length > 0 ? (
               <div className="p-6 text-center text-xs font-mono text-slate-400">
                 Click any zone marker on the central map to inspect detailed spatial telemetry.
+              </div>
+            ) : (
+              <div className="p-6 text-center text-xs font-mono text-slate-400 space-y-2">
+                <DataTrustBadge status="DATA UNAVAILABLE" size="sm" source="Spatial Micro-Grid Telemetry" />
+                <p className="mt-1">No zoned micro-grid telemetry recorded for {currentCity.name}.</p>
+                <p className="text-[10px] text-slate-500">Spatial telemetry is available for metropolitan sectors with active IoT sensor arrays.</p>
               </div>
             )}
           </div>

@@ -1,5 +1,7 @@
 """Places and points of interest service layer."""
 
+import asyncio
+import time
 from typing import Any
 from pymongo.database import Database
 
@@ -48,13 +50,34 @@ class PlacesService:
                 cached_res["meta"] = {**cached.get("meta", {}), "cached": True}
                 return cached_res
 
-        res = await self.provider.get_places(
-            latitude=latitude,
-            longitude=longitude,
-            category=category,
-            radius=radius,
-            limit=limit,
-        )
+        try:
+            res = await asyncio.wait_for(
+                self.provider.get_places(
+                    latitude=latitude,
+                    longitude=longitude,
+                    category=category,
+                    radius=radius,
+                    limit=limit,
+                ),
+                timeout=3.0,
+            )
+        except (asyncio.TimeoutError, Exception) as exc:
+            logger.warning("Places provider query timed out or failed for (%s, %s): %s", latitude, longitude, exc)
+            return {
+                "latitude": latitude,
+                "longitude": longitude,
+                "category": category,
+                "radius_meters": radius,
+                "places": [],
+                "count": 0,
+                "meta": {
+                    "source": "overpass",
+                    "status": "unavailable",
+                    "timestamp": time.time(),
+                    "cached": False,
+                    "error_detail": f"Places lookup timed out: {exc}",
+                },
+            }
 
         result = {
             "latitude": latitude,
@@ -70,4 +93,3 @@ class PlacesService:
             self.cache.set(cache_key, result, ttl_seconds=600.0)
 
         return result
-

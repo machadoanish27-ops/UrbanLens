@@ -1,3 +1,4 @@
+import asyncio
 import re
 from typing import Any
 from pymongo.database import Database
@@ -184,27 +185,34 @@ class EducationService:
 
             if osm_places is None:
                 try:
-                    # Query college and university amenities within 8km radius
-                    res_col = await self.places_provider.get_places(
+                    # Query college and university amenities concurrently with a fast 1.5s bounded timeout
+                    col_task = self.places_provider.get_places(
                         latitude=float(lat),
                         longitude=float(lon),
                         category="college",
-                        radius=8000,
+                        radius=4500,
                         limit=25,
                     )
-                    res_univ = await self.places_provider.get_places(
+                    univ_task = self.places_provider.get_places(
                         latitude=float(lat),
                         longitude=float(lon),
                         category="university",
-                        radius=8000,
+                        radius=4500,
                         limit=25,
                     )
-                    places_list = (res_col.data or []) + (res_univ.data or [])
+                    results = await asyncio.wait_for(
+                        asyncio.gather(col_task, univ_task, return_exceptions=True),
+                        timeout=1.5,
+                    )
+                    places_list = []
+                    for r in results:
+                        if not isinstance(r, Exception) and r and r.data:
+                            places_list.extend(r.data)
                     osm_places = [p.model_dump() for p in places_list]
                     if self.cache:
                         self.cache.set(cache_key, osm_places, ttl_seconds=900.0)
                 except Exception as exc:
-                    logger.debug("Failed to fetch OSM education POIs: %s", exc)
+                    logger.debug("Fast-fallback on OSM education POIs (%s); serving canonical database records.", exc)
                     osm_places = []
 
             for p in (osm_places or []):

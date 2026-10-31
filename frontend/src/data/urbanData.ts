@@ -52,10 +52,14 @@ export interface CityData {
   name: string;
   country: string;
   countryCode: string;
+  country_id?: string;
+  currency?: { code: string; symbol?: string; name?: string };
   population: string;
   populationRaw: number;
   density: string;
   coordinates: string;
+  latitude: number;
+  longitude: number;
   temperature: number;
   feelsLike: number;
   humidity: number;
@@ -139,10 +143,13 @@ export const CITIES_DATA: Record<string, CityData> = {
     name: 'Mumbai',
     country: 'India',
     countryCode: 'IN',
+    currency: { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
     population: '21,357,000',
     populationRaw: 21357000,
     density: '32,303 / km²',
     coordinates: '19.0760° N, 72.8777° E',
+    latitude: 19.076,
+    longitude: 72.8777,
     temperature: 31,
     feelsLike: 36,
     humidity: 78,
@@ -367,10 +374,13 @@ export const CITIES_DATA: Record<string, CityData> = {
     name: 'Tokyo',
     country: 'Japan',
     countryCode: 'JP',
+    currency: { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
     population: '37,400,000',
     populationRaw: 37400000,
     density: '15,604 / km²',
     coordinates: '35.6762° N, 139.6503° E',
+    latitude: 35.6762,
+    longitude: 139.6503,
     temperature: 19,
     feelsLike: 19,
     humidity: 52,
@@ -459,10 +469,13 @@ export const CITIES_DATA: Record<string, CityData> = {
     name: 'London',
     country: 'United Kingdom',
     countryCode: 'GB',
+    currency: { code: 'GBP', symbol: '£', name: 'British Pound' },
     population: '9,648,000',
     populationRaw: 9648000,
     density: '5,727 / km²',
     coordinates: '51.5074° N, 0.1278° W',
+    latitude: 51.5074,
+    longitude: -0.1278,
     temperature: 14,
     feelsLike: 13,
     humidity: 82,
@@ -536,10 +549,13 @@ export const CITIES_DATA: Record<string, CityData> = {
     name: 'Paris',
     country: 'France',
     countryCode: 'FR',
+    currency: { code: 'EUR', symbol: '€', name: 'Euro' },
     population: '11,200,000',
     populationRaw: 11200000,
     density: '20,800 / km²',
     coordinates: '48.8566° N, 2.3522° E',
+    latitude: 48.8566,
+    longitude: 2.3522,
     temperature: 16,
     feelsLike: 16,
     humidity: 71,
@@ -602,10 +618,13 @@ export const CITIES_DATA: Record<string, CityData> = {
     name: 'New York',
     country: 'United States',
     countryCode: 'US',
+    currency: { code: 'USD', symbol: '$', name: 'US Dollar' },
     population: '19,000,000',
     populationRaw: 19000000,
     density: '11,313 / km²',
     coordinates: '40.7128° N, 74.0060° W',
+    latitude: 40.7128,
+    longitude: -74.006,
     temperature: 18,
     feelsLike: 17,
     humidity: 64,
@@ -669,10 +688,13 @@ export const CITIES_DATA: Record<string, CityData> = {
     name: 'Singapore',
     country: 'Singapore',
     countryCode: 'SG',
+    currency: { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
     population: '5,900,000',
     populationRaw: 5900000,
     density: '8,358 / km²',
     coordinates: '1.3521° N, 103.8198° E',
+    latitude: 1.3521,
+    longitude: 103.8198,
     temperature: 30,
     feelsLike: 35,
     humidity: 84,
@@ -737,10 +759,13 @@ export const CITIES_DATA: Record<string, CityData> = {
     name: 'Dubai',
     country: 'United Arab Emirates',
     countryCode: 'AE',
+    currency: { code: 'AED', symbol: 'AED', name: 'UAE Dirham' },
     population: '3,550,000',
     populationRaw: 3550000,
     density: '862 / km²',
     coordinates: '25.2048° N, 55.2708° E',
+    latitude: 25.2048,
+    longitude: 55.2708,
     temperature: 34,
     feelsLike: 39,
     humidity: 48,
@@ -1040,3 +1065,70 @@ export const URBAN_REPORTS: UrbanReport[] = [
     keyFinding: 'Tokyo achieves 94% transit utilization through automated CBTC dispatch headways of 120s.'
   }
 ];
+
+
+export function getCurrencyForCountryCode(countryCode?: string): { code: string; symbol: string; name: string } {
+  const code = (countryCode || '').toUpperCase().trim();
+  switch (code) {
+    case 'IN':
+      return { code: 'INR', symbol: '₹', name: 'Indian Rupee' };
+    case 'JP':
+      return { code: 'JPY', symbol: '¥', name: 'Japanese Yen' };
+    case 'GB':
+    case 'UK':
+      return { code: 'GBP', symbol: '£', name: 'British Pound' };
+    case 'US':
+      return { code: 'USD', symbol: '$', name: 'US Dollar' };
+    case 'FR':
+    case 'DE':
+    case 'IT':
+    case 'ES':
+    case 'NL':
+    case 'EU':
+      return { code: 'EUR', symbol: '€', name: 'Euro' };
+    case 'SG':
+      return { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' };
+    case 'AE':
+      return { code: 'AED', symbol: 'AED', name: 'UAE Dirham' };
+    default:
+      return { code: 'USD', symbol: '$', name: 'US Dollar' };
+  }
+}
+
+export const CANONICAL_CITY_MAP: Record<string, string> = {
+  mumbai: 'city_1356226629',
+  tokyo: 'city_1392685764',
+  london: 'city_1826645935',
+  newyork: 'city_1840034016',
+  'new-york': 'city_1840034016',
+  'new york': 'city_1840034016',
+  paris: 'city_1250015082',
+  singapore: 'city_1702341327',
+  dubai: 'city_1784736618',
+};
+
+export const CANONICAL_TO_KEY: Record<string, string> = {
+  city_1356226629: 'mumbai',
+  city_1392685764: 'tokyo',
+  city_1826645935: 'london',
+  city_1840034016: 'newyork',
+  city_1250015082: 'paris',
+  city_1702341327: 'singapore',
+  city_1784736618: 'dubai',
+};
+
+export function normalizeCityId(id?: string | null): string {
+  if (!id) return 'city_1356226629';
+  const trimmed = id.trim();
+  if (trimmed.startsWith('city_')) return trimmed;
+  const lower = trimmed.toLowerCase();
+  return CANONICAL_CITY_MAP[lower] || trimmed;
+}
+
+export function getStudioKeyForId(id?: string | null): string {
+  const norm = normalizeCityId(id);
+  if (CANONICAL_TO_KEY[norm]) return CANONICAL_TO_KEY[norm];
+  const lower = (id || '').toLowerCase().trim();
+  if (CITIES_DATA[lower]) return lower;
+  return 'mumbai';
+}

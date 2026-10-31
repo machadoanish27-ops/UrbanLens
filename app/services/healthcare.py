@@ -1,3 +1,4 @@
+import asyncio
 """Healthcare discovery service providing verified and mapped healthcare locations."""
 
 from typing import Any
@@ -108,19 +109,26 @@ class HealthcareService:
             categories_to_query = [category.strip().lower()]
 
         raw_places = []
-        for cat in categories_to_query:
-            try:
-                res = await self.places_provider.get_places(
-                    latitude=float(lat),
-                    longitude=float(lon),
-                    category=cat,
-                    radius=radius,
-                    limit=limit // len(categories_to_query) + 5,
-                )
-                if res.is_successful and res.data:
-                    raw_places.extend(res.data)
-            except Exception as exc:
-                logger.debug("Failed querying healthcare cat %s: %s", cat, exc)
+        tasks = [
+            self.places_provider.get_places(
+                latitude=float(lat),
+                longitude=float(lon),
+                category=cat,
+                radius=min(radius, 5000),
+                limit=max(5, limit // len(categories_to_query) + 5),
+            )
+            for cat in categories_to_query
+        ]
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=2.5,
+            )
+            for r in results:
+                if not isinstance(r, Exception) and r and r.is_successful and r.data:
+                    raw_places.extend(r.data)
+        except Exception as exc:
+            logger.debug("Healthcare discovery query bounded timeout (%s)", exc)
 
         facilities: list[HealthcareFacilityItem] = []
         seen_ids: set[str] = set()

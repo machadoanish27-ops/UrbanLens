@@ -52,6 +52,7 @@ export const InteractiveMap: FC<InteractiveMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const centerMarkerRef = useRef<L.Marker | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Filter markers based on selected category
@@ -88,6 +89,7 @@ export const InteractiveMap: FC<InteractiveMapProps> = ({
   // Initialize Leaflet Map once
   useEffect(() => {
     if (!mapContainerRef.current) return;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number' || isNaN(latitude) || isNaN(longitude)) return;
 
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
@@ -145,6 +147,7 @@ export const InteractiveMap: FC<InteractiveMapProps> = ({
         <span style="font-family: monospace; font-size: 11px; color: #cbd5e1;">${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E</span>
       </div>
     `);
+    centerMarkerRef.current = centerMarker;
 
     // Layer group for dynamic POI markers
     const markersLayer = L.layerGroup().addTo(map);
@@ -159,8 +162,35 @@ export const InteractiveMap: FC<InteractiveMapProps> = ({
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        centerMarkerRef.current = null;
+        markersLayerRef.current = null;
       }
     };
+  }, []);
+
+  // Dynamically re-center and update city anchor when city coordinates, name, or zoom change
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number' || isNaN(latitude) || isNaN(longitude)) return;
+
+    mapInstanceRef.current.setView([latitude, longitude], zoom, { animate: true });
+
+    if (centerMarkerRef.current) {
+      centerMarkerRef.current.setLatLng([latitude, longitude]);
+      centerMarkerRef.current.bindPopup(`
+        <div style="font-size: 12px; line-height: 1.4; font-family: system-ui, sans-serif;">
+          <strong style="color: #818cf8; font-size: 13px;">${cityName}</strong><br/>
+          <span style="color: #94a3b8; font-size: 11px;">City Center Geographic Anchor</span><br/>
+          <span style="font-family: monospace; font-size: 11px; color: #cbd5e1;">${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E</span>
+        </div>
+      `);
+    }
+
+    const timer = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 150);
+
+    return () => clearTimeout(timer);
   }, [latitude, longitude, cityName, zoom]);
 
   // Update POI markers whenever filteredMarkers changes

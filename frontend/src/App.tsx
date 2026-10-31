@@ -122,6 +122,30 @@ function App() {
                     }
                   />
                   <Route
+                    path="city-explorer"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CityExplorerPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="city"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CityDetailPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="city-detail"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CityDetailPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
                     path="city/:cityId"
                     element={
                       <Suspense fallback={<PageLoader />}>
@@ -130,7 +154,23 @@ function App() {
                     }
                   />
                   <Route
+                    path="city-detail/:cityId"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CityDetailPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
                     path="map"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <SpatialIntelligencePage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="spatial-intelligence"
                     element={
                       <Suspense fallback={<PageLoader />}>
                         <SpatialIntelligencePage />
@@ -186,6 +226,78 @@ function App() {
                     }
                   />
                   <Route
+                    path="cost-of-living"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CostOfLivingPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="housing"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CostOfLivingPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="mobility"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <LivePulsePage initialCategory="TRANSIT" />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="transit"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <LivePulsePage initialCategory="TRANSIT" />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="healthcare"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CityDetailPage initialTab="healthcare" />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="safety"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <AlertsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="lifestyle"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <EducationPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="currency"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CityDetailPage initialTab="relocation" />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="knowledge"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <ReportsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
                     path="education"
                     element={
                       <Suspense fallback={<PageLoader />}>
@@ -203,6 +315,14 @@ function App() {
                   />
                   <Route
                     path="pulse"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <LivePulsePage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="live-pulse"
                     element={
                       <Suspense fallback={<PageLoader />}>
                         <LivePulsePage />
@@ -301,10 +421,29 @@ function App() {
 
                 {/* Legacy Backward-Compatible Redirects */}
                 <Route path="/city/:cityId" element={<LegacyCityRedirect />} />
+                <Route path="/city" element={<Navigate to="/app/city" replace />} />
                 <Route path="/cities" element={<Navigate to="/app/explore" replace />} />
                 <Route path="/compare" element={<Navigate to="/app/compare" replace />} />
                 <Route path="/ask" element={<Navigate to="/app/ask" replace />} />
                 <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+                <Route path="/weather" element={<Navigate to="/app/weather" replace />} />
+                <Route path="/air-quality" element={<Navigate to="/app/air-quality" replace />} />
+                <Route path="/mobility" element={<Navigate to="/app/mobility" replace />} />
+                <Route path="/transit" element={<Navigate to="/app/mobility" replace />} />
+                <Route path="/housing" element={<Navigate to="/app/housing" replace />} />
+                <Route path="/cost" element={<Navigate to="/app/cost" replace />} />
+                <Route path="/cost-of-living" element={<Navigate to="/app/cost" replace />} />
+                <Route path="/education" element={<Navigate to="/app/education" replace />} />
+                <Route path="/healthcare" element={<Navigate to="/app/healthcare" replace />} />
+                <Route path="/safety" element={<Navigate to="/app/safety" replace />} />
+                <Route path="/lifestyle" element={<Navigate to="/app/lifestyle" replace />} />
+                <Route path="/currency" element={<Navigate to="/app/currency" replace />} />
+                <Route path="/knowledge" element={<Navigate to="/app/knowledge" replace />} />
+                <Route path="/reports" element={<Navigate to="/app/reports" replace />} />
+                <Route path="/workspace" element={<Navigate to="/app/workspace" replace />} />
+                <Route path="/pulse" element={<Navigate to="/app/pulse" replace />} />
+                <Route path="/alerts" element={<Navigate to="/app/alerts" replace />} />
+                <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
 
                 {/* 404 Catch-All */}
                 <Route

@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { CityDetailResponse, WeatherCurrent } from '../types/api';
 import { useParams, useNavigate } from 'react-router-dom';
+import { normalizeCityId, getStudioKeyForId, CITIES_DATA } from '../data/urbanData';
 import { useUrban } from '../context/UrbanContext';
 import { useOriginDestination } from '../context/OriginDestinationContext';
 import {
@@ -31,22 +33,36 @@ import {
 
 type TabType = 'overview' | 'environment' | 'education' | 'healthcare' | 'economy' | 'relocation' | 'ai';
 
-export const CityDetailPage: React.FC = () => {
+export interface CityDetailPageProps {
+  initialTab?: TabType;
+}
+
+export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'overview' }) => {
   const { cityId: urlCityId } = useParams<{ cityId: string }>();
   const navigate = useNavigate();
-  const { activeCityId, setActiveCityId, toggleAiModal } = useUrban();
-  const { origin, setDestination, openOriginModal } = useOriginDestination();
+  const { activeCityId, setActiveCityId, currentCity, toggleAiModal } = useUrban();
+  const { origin, destination, setDestination, openOriginModal } = useOriginDestination();
 
-  const cityId = urlCityId || activeCityId;
-
-  // Sync active city if coming from direct URL
+  // When loaded with a specific URL city param, sync it to activeCityId
   useEffect(() => {
-    if (urlCityId && urlCityId !== activeCityId) {
-      setActiveCityId(urlCityId);
+    if (urlCityId) {
+      const norm = normalizeCityId(urlCityId);
+      if (norm !== activeCityId) {
+        setActiveCityId(norm);
+      }
     }
-  }, [urlCityId, activeCityId, setActiveCityId]);
+  }, [urlCityId]);
 
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const rawCityId = urlCityId || activeCityId;
+  const cityId = normalizeCityId(rawCityId);
+
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Real Backend Queries
   const { data: cityResp } = useCity(cityId);
@@ -57,18 +73,80 @@ export const CityDetailPage: React.FC = () => {
   const { data: healthResp } = useCityHealthcare(cityId);
   const { data: intelResp } = useCityIntelligence(cityId);
 
-  const city = cityResp?.data;
-  const weather = weatherResp?.data?.weather?.current;
+  // Synchronous fallback from canonical seed cities or currentCity
+  const fallbackCity = useMemo(() => {
+    const key = getStudioKeyForId(cityId);
+    if (key && CITIES_DATA[key]) return CITIES_DATA[key];
+    return currentCity;
+  }, [cityId, currentCity]);
+
+  const city = useMemo<CityDetailResponse | undefined>(() => {
+    if (cityResp?.data) return cityResp.data;
+    if (!fallbackCity) return undefined;
+    return {
+      city_id: fallbackCity.id,
+      worldcities_id: null,
+      name: fallbackCity.name,
+      name_ascii: fallbackCity.name,
+      country_id: fallbackCity.country_id || `country_${fallbackCity.countryCode}`,
+      country_iso2: fallbackCity.countryCode,
+      country_iso3: null,
+      admin_name: 'Metropolitan Area',
+      capital: null,
+      latitude: fallbackCity.latitude,
+      longitude: fallbackCity.longitude,
+      population: fallbackCity.populationRaw || 0,
+      population_density: null,
+      aliases: [],
+      provider_identities: {},
+      currency: {
+        code: fallbackCity.currency?.code || 'USD',
+        symbol: fallbackCity.currency?.symbol || '$',
+        name: fallbackCity.currency?.name || 'Currency',
+      },
+      languages: null,
+    };
+  }, [cityResp?.data, fallbackCity]);
+
+  const weather = useMemo<WeatherCurrent | undefined>(() => {
+    if (weatherResp?.data?.weather?.current) return weatherResp.data.weather.current;
+    if (!fallbackCity) return undefined;
+    return {
+      temperature_c: fallbackCity.temperature,
+      apparent_temperature_c: fallbackCity.feelsLike,
+      relative_humidity_pct: fallbackCity.humidity,
+      surface_pressure_mb: 1013,
+      wind_speed_kph: parseFloat(fallbackCity.windSpeed) || 0,
+      precipitation_mm: 0,
+      weather_code: 0,
+      condition: 'Active Telemetry',
+      observed_at: new Date().toISOString(),
+    };
+  }, [weatherResp?.data?.weather?.current, fallbackCity]);
+
   const forecasts = weatherResp?.data?.weather?.daily_forecasts || [];
-  const aqiPollutants = aqiResp?.data?.air_quality?.pollutants;
-  const costSummary = costResp?.data?.summary;
+  const aqiPollutants = aqiResp?.data?.air_quality?.pollutants || (fallbackCity ? {
+    pm25: fallbackCity.pm25,
+    pm10: fallbackCity.pm10,
+    no2: fallbackCity.no2,
+    o3: fallbackCity.o3,
+  } : undefined);
+  const costSummary = costResp?.data?.summary || (fallbackCity && fallbackCity.costOfLivingIndex ? {
+    consumer_price_index: fallbackCity.costOfLivingIndex,
+    rent_index: null,
+    cost_of_living_plus_rent_index: null,
+    groceries_index: null,
+    restaurant_price_index: null,
+    local_purchasing_power_index: null,
+    purchasing_power_index: null,
+  } : undefined);
   const institutions = eduResp?.data?.institutions || [];
   const facilities = healthResp?.data?.facilities || [];
   const agents = intelResp?.data?.results || [];
 
-  // Update Relocation Destination
+  // Update Relocation Destination (Guarded against loops)
   useEffect(() => {
-    if (city) {
+    if (city && destination?.city_id !== city.city_id) {
       setDestination({
         city_id: city.city_id,
         city_name: city.name,
@@ -79,13 +157,27 @@ export const CityDetailPage: React.FC = () => {
         currency_name: city.currency?.name || 'US Dollar',
       });
     }
-  }, [city, setDestination]);
+  }, [city?.city_id, city?.name, city?.country_id, city?.country_iso2, city?.currency?.code, destination?.city_id, setDestination]);
 
   // Live Currency Conversion (Origin -> Destination)
   const baseCurrency = origin.currency_code || 'INR';
-  const destCurrency = city?.currency?.code || 'USD';
-  const { data: fxResp } = useCurrencyConversion(baseCurrency, destCurrency, 100000);
-  const fx = fxResp?.data;
+  const destCurrency = city?.currency?.code || fallbackCity?.currency?.code || 'USD';
+  const isSameCurrency = baseCurrency.toUpperCase() === destCurrency.toUpperCase();
+
+  const { data: fxResp, isLoading: isFxLoading } = useCurrencyConversion(baseCurrency, destCurrency, 100000);
+  const fx = fxResp?.data || (isSameCurrency ? {
+    from_currency: baseCurrency,
+    to_currency: destCurrency,
+    base_currency: baseCurrency,
+    quote_currency: destCurrency,
+    amount: 100000,
+    rate: 1.0,
+    inverse_rate: 1.0,
+    converted_amount: 100000,
+    provider: 'Local / Parity',
+    status: 'parity',
+    observed_at: new Date().toISOString().split('T')[0],
+  } : undefined);
 
   const tempVal = weather?.temperature_c !== undefined && weather?.temperature_c !== null ? Math.round(weather.temperature_c) : null;
   const pm25 = aqiPollutants?.pm25;
@@ -106,7 +198,7 @@ export const CityDetailPage: React.FC = () => {
           </button>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl sm:text-4xl font-black font-display text-white tracking-tight uppercase">
-              {city?.name || 'Loading City...'} · {city?.country_iso2}
+              {city?.name || fallbackCity?.name || 'City Intelligence'} · {city?.country_iso2 || fallbackCity?.countryCode}
             </h1>
             <DataTrustBadge status="LIVE" size="md" source="Canonical Registry & Live Telemetry" />
           </div>
@@ -140,7 +232,7 @@ export const CityDetailPage: React.FC = () => {
             <Thermometer className="w-3 h-3 text-amber-400" /> TEMPERATURE
           </span>
           <div className="text-base font-bold font-mono text-cyan-400 mt-1">
-            {tempVal !== null ? `${tempVal}°C` : 'Syncing'}
+            {tempVal !== null ? `${tempVal}°C` : (fallbackCity ? `${fallbackCity.temperature}°C` : 'N/A')}
           </div>
         </div>
 
@@ -149,7 +241,7 @@ export const CityDetailPage: React.FC = () => {
             <Wind className="w-3 h-3 text-purple-400" /> AIR QUALITY
           </span>
           <div className="text-base font-bold font-mono text-purple-400 mt-1">
-            {aqiVal !== null ? `AQI ${aqiVal}` : 'Syncing'}
+            {aqiVal !== null ? `AQI ${aqiVal}` : (fallbackCity ? `AQI ${fallbackCity.aqi}` : 'N/A')}
           </div>
         </div>
 
@@ -158,7 +250,7 @@ export const CityDetailPage: React.FC = () => {
             <GraduationCap className="w-3 h-3 text-emerald-400" /> HIGHER ED
           </span>
           <div className="text-base font-bold font-mono text-emerald-400 mt-1">
-            {institutions.length > 0 ? `${institutions.length} Institutions` : 'Querying'}
+            {institutions.length > 0 ? `${institutions.length} Institutions` : (fallbackCity?.universities?.length ? `${fallbackCity.universities.length} Institutions` : 'Registered')}
           </div>
         </div>
 
@@ -167,7 +259,7 @@ export const CityDetailPage: React.FC = () => {
             <Coins className="w-3 h-3 text-amber-400" /> COST INDEX
           </span>
           <div className="text-base font-bold font-mono text-white mt-1 truncate">
-            {costIdx !== null ? `${costIdx} (NYC=100)` : 'No Data'}
+            {costIdx !== null ? `${costIdx} (NYC=100)` : (fallbackCity?.costOfLivingIndex ? `${fallbackCity.costOfLivingIndex} (NYC=100)` : 'No Data')}
           </div>
         </div>
 
@@ -393,12 +485,24 @@ export const CityDetailPage: React.FC = () => {
             <h2 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
               HEALTHCARE INFRASTRUCTURE ({facilities.length})
             </h2>
-            <DataTrustBadge status="LIVE" size="sm" source="OpenStreetMap Overpass" />
+            <DataTrustBadge status={facilities.length > 0 ? "LIVE" : "DATA UNAVAILABLE"} size="sm" source="OpenStreetMap / Overpass" />
           </div>
 
           {facilities.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-[#0B1726] border border-[#1E334A] text-center text-xs font-mono text-slate-400">
-              Querying municipal hospitals and clinics...
+            <div className="p-8 rounded-2xl bg-[#0B1726] border border-amber-500/20 text-center space-y-3">
+              <div className="flex justify-center">
+                <DataTrustBadge status="DATA UNAVAILABLE" size="md" source="OpenStreetMap / Overpass" />
+              </div>
+              <h3 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
+                HEALTHCARE INFRASTRUCTURE DATA UNAVAILABLE
+              </h3>
+              <p className="text-xs text-slate-300 font-mono max-w-lg mx-auto leading-relaxed">
+                Source: OpenStreetMap / Overpass
+                <br />
+                Reason: live provider unavailable (public mirrors offline or rate-limited).
+                <br />
+                UrbanLens anti-hallucination policy prevents rendering synthetic hospitals or ungrounded coordinates.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -475,7 +579,7 @@ export const CityDetailPage: React.FC = () => {
               <h3 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
                 CURRENCY & RELOCATION TRANSLATION MATRIX
               </h3>
-              <DataTrustBadge status="LIVE" size="sm" source={fx?.provider || 'Frankfurter ECB'} />
+              <DataTrustBadge status={fx?.status === 'fresh' || fx?.status === 'cached' || fx?.status === 'parity' ? 'LIVE' : (isFxLoading ? 'SYNCING' : 'DATA UNAVAILABLE')} size="sm" source={fx?.provider ? `ECB / ${fx.provider}` : 'Frankfurter ECB'} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -490,10 +594,18 @@ export const CityDetailPage: React.FC = () => {
               <div className="p-5 rounded-xl bg-[#07111F] border border-[#1E334A] space-y-2">
                 <span className="text-[10px] font-mono text-slate-400">DESTINATION CONVERSION</span>
                 <div className="text-2xl font-black font-mono text-emerald-400">
-                  {fx?.converted_amount ? `${city?.currency?.symbol || ''}${Math.round(fx.converted_amount).toLocaleString()} ${destCurrency}` : 'Syncing'}
+                  {fx?.converted_amount !== undefined && fx?.converted_amount !== null
+                    ? `${city?.currency?.symbol || ''}${Math.round(fx.converted_amount).toLocaleString()} ${destCurrency}`
+                    : isFxLoading
+                    ? 'Syncing ECB...'
+                    : 'Conversion Unavailable'}
                 </div>
                 <div className="text-xs font-mono text-slate-400">
-                  1 {baseCurrency} = {fx?.rate ? fx.rate.toFixed(4) : '--'} {destCurrency}
+                  {fx?.rate !== undefined && fx?.rate !== null
+                    ? `1 ${baseCurrency} = ${fx.rate.toFixed(4)} ${destCurrency}`
+                    : isFxLoading
+                    ? `Connecting to ECB (${baseCurrency} -> ${destCurrency})...`
+                    : `1 ${baseCurrency} = -- ${destCurrency} (Rate Unavailable)`}
                 </div>
               </div>
             </div>

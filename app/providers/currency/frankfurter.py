@@ -24,7 +24,7 @@ class FrankfurterCurrencyProvider(BaseCurrencyProvider):
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self.base_url = (base_url or settings.FRANKFURTER_BASE_URL).rstrip("/")
-        self.timeout = timeout or settings.PROVIDER_TIMEOUT_SECONDS
+        self.timeout = timeout or min(settings.PROVIDER_TIMEOUT_SECONDS, 3.5)
         self._external_client = client
 
     @property

@@ -8,7 +8,12 @@ export const CompareCitiesPage: React.FC = () => {
   const { currentCity, compareCityId, setCompareCityId } = useUrban();
 
   const cityA = currentCity;
-  const cityB = CITIES_DATA[compareCityId] || CITIES_DATA['tokyo'];
+  const rawCityBKey = compareCityId.toLowerCase();
+  const fallbackKey = (cityA.name.toLowerCase() === 'tokyo' || cityA.id.includes('1392685764')) ? 'london' : 'tokyo';
+  const effectiveCityBKey = (rawCityBKey === cityA.name.toLowerCase() || rawCityBKey === cityA.id.toLowerCase())
+    ? fallbackKey
+    : (CITIES_DATA[rawCityBKey] ? rawCityBKey : fallbackKey);
+  const cityB = CITIES_DATA[effectiveCityBKey] || CITIES_DATA[fallbackKey];
 
   const metrics = [
     {
@@ -98,7 +103,7 @@ export const CompareCitiesPage: React.FC = () => {
             onChange={(e) => setCompareCityId(e.target.value)}
             className="px-3.5 py-2 rounded-xl bg-[#07111F] border border-[#1E334A] text-xs font-mono text-white outline-none focus:border-cyan-400"
           >
-            {Object.values(CITIES_DATA).filter(c => c.id !== cityA.id).map((c) => (
+            {Object.values(CITIES_DATA).filter(c => c.name.toLowerCase() !== cityA.name.toLowerCase()).map((c) => (
               <option key={c.id} value={c.id} className="bg-slate-900">
                 {c.name} ({c.country})
               </option>
@@ -132,48 +137,56 @@ export const CompareCitiesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Comparative Metrics Rows (Section 24) */}
-      <div className="space-y-4">
+      {/* Telemetry Matrix Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {metrics.map((m, idx) => {
-          const total = (m.rawA + m.rawB) || 1;
-          const pctA = Math.round((m.rawA / total) * 100);
-          const pctB = 100 - pctA;
-          const IconComp = m.icon;
+          const Icon = m.icon;
+          const aIsBetter = m.lowerIsBetter ? m.rawA < m.rawB : m.rawA > m.rawB;
+          const bIsBetter = m.lowerIsBetter ? m.rawB < m.rawA : m.rawB > m.rawA;
 
           return (
-            <div key={idx} className="p-5 rounded-2xl bg-[#0B1726] border border-[#1E334A] space-y-3">
-              <div className="flex items-center justify-between">
+            <div
+              key={idx}
+              className="p-5 rounded-2xl bg-[#0B1726] border border-[#1E334A] space-y-3"
+            >
+              <div className="flex items-center justify-between text-xs font-mono text-slate-400">
                 <div className="flex items-center gap-2">
-                  <IconComp className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs font-bold font-mono text-white uppercase">{m.label}</span>
+                  <Icon className="w-4 h-4 text-cyan-400" />
+                  <span className="font-bold text-white uppercase">{m.label}</span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400">UNIT: {m.unit}</span>
+                <span className="text-[10px] text-slate-400">{m.unit}</span>
               </div>
 
-              {/* Side-by-side Numerical Values */}
-              <div className="flex items-center justify-between text-base font-mono font-bold">
-                <span className="text-cyan-400">{m.valA}</span>
-                <span className="text-xs text-slate-500 font-normal">VS</span>
-                <span className="text-purple-400">{m.valB}</span>
-              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#1E334A]">
+                {/* Metric A */}
+                <div className="p-3 rounded-xl bg-[#07111F] border border-[#1E334A]">
+                  <div className="text-[10px] font-mono text-cyan-400 font-bold uppercase truncate">
+                    {cityA.name}
+                  </div>
+                  <div className="text-lg font-black font-mono text-white mt-0.5 truncate">
+                    {m.valA}
+                  </div>
+                  {aIsBetter && (
+                    <span className="text-[9px] font-mono text-emerald-400 font-bold block mt-1">
+                      OPTIMAL VALUE
+                    </span>
+                  )}
+                </div>
 
-              {/* Visual Split Bar */}
-              <div className="w-full h-2.5 rounded-full bg-slate-900 border border-[#1E334A] overflow-hidden flex">
-                <div
-                  className="h-full bg-cyan-400 transition-all duration-300"
-                  style={{ width: `${pctA}%` }}
-                  title={`${cityA.name}: ${pctA}%`}
-                />
-                <div
-                  className="h-full bg-purple-500 transition-all duration-300"
-                  style={{ width: `${pctB}%` }}
-                  title={`${cityB.name}: ${pctB}%`}
-                />
-              </div>
-
-              <div className="flex justify-between text-[10px] font-mono text-slate-400 pt-1">
-                <span>{cityA.name} ({pctA}%)</span>
-                <span>{cityB.name} ({pctB}%)</span>
+                {/* Metric B */}
+                <div className="p-3 rounded-xl bg-[#07111F] border border-[#1E334A]">
+                  <div className="text-[10px] font-mono text-purple-400 font-bold uppercase truncate">
+                    {cityB.name}
+                  </div>
+                  <div className="text-lg font-black font-mono text-white mt-0.5 truncate">
+                    {m.valB}
+                  </div>
+                  {bIsBetter && (
+                    <span className="text-[9px] font-mono text-emerald-400 font-bold block mt-1">
+                      OPTIMAL VALUE
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           );

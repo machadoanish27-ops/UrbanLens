@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { urbanLensApi, ApiError } from '../api/client';
+import { normalizeCityId } from '../data/urbanData';
 import type {
   AirQualityResponse,
   ApiResponse,
@@ -82,66 +83,73 @@ export function useCities(params?: {
 }
 
 export function useCity(cityId: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<CityDetailResponse>, ApiError>({
-    queryKey: QUERY_KEYS.city(cityId),
-    queryFn: () => urbanLensApi.getCity(cityId),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.city(normId),
+    queryFn: () => urbanLensApi.getCity(normId),
+    enabled: Boolean(normId),
     staleTime: 5 * 60_000,
   });
 }
 
 export function useCityOverview(cityId: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<any>, ApiError>({
-    queryKey: QUERY_KEYS.cityOverview(cityId),
-    queryFn: () => urbanLensApi.getCityOverview(cityId),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.cityOverview(normId),
+    queryFn: () => urbanLensApi.getCityOverview(normId),
+    enabled: Boolean(normId),
     staleTime: 5 * 60_000,
   });
 }
 
 export function useCityWeather(cityId: string, forecastDays: number = 7) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<LiveWeatherResponse>, ApiError>({
-    queryKey: QUERY_KEYS.weather(cityId, forecastDays),
-    queryFn: () => urbanLensApi.getCityWeatherLive(cityId, forecastDays),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.weather(normId, forecastDays),
+    queryFn: () => urbanLensApi.getCityWeatherLive(normId, forecastDays),
+    enabled: Boolean(normId),
     staleTime: 2 * 60_000, // Weather can refresh after 2 minutes
     refetchOnWindowFocus: false,
   });
 }
 
 export function useCityAirQuality(cityId: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<AirQualityResponse>, ApiError>({
-    queryKey: QUERY_KEYS.airQuality(cityId),
-    queryFn: () => urbanLensApi.getCityAirQuality(cityId),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.airQuality(normId),
+    queryFn: () => urbanLensApi.getCityAirQuality(normId),
+    enabled: Boolean(normId),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
 }
 
 export function useCityCost(cityId: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<CostOfLivingResponse>, ApiError>({
-    queryKey: QUERY_KEYS.cost(cityId),
-    queryFn: () => urbanLensApi.getCityCostOfLiving(cityId),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.cost(normId),
+    queryFn: () => urbanLensApi.getCityCostOfLiving(normId),
+    enabled: Boolean(normId),
     staleTime: 10 * 60_000,
   });
 }
 
 export function useCityUniversities(cityId: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<UniversityItem[]>, ApiError>({
-    queryKey: QUERY_KEYS.universities(cityId),
-    queryFn: () => urbanLensApi.getCityUniversities(cityId),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.universities(normId),
+    queryFn: () => urbanLensApi.getCityUniversities(normId),
+    enabled: Boolean(normId),
     staleTime: 10 * 60_000,
   });
 }
 
 export function useCityTransit(cityId: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<TransitFeedResponse>, ApiError>({
-    queryKey: QUERY_KEYS.transit(cityId),
-    queryFn: () => urbanLensApi.getTransitInfo(cityId),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.transit(normId),
+    queryFn: () => urbanLensApi.getTransitInfo(normId),
+    enabled: Boolean(normId),
     staleTime: 10 * 60_000,
   });
 }
@@ -152,20 +160,28 @@ export function useCityPlaces(params: {
   category?: string;
   radius?: number;
   limit?: number;
+  enabled?: boolean;
 }) {
+  const hasCoords = typeof params.lat === 'number' && typeof params.lon === 'number' &&
+    (Math.abs(params.lat) > 0.0001 || Math.abs(params.lon) > 0.0001);
+  const isEnabled = hasCoords && (params.enabled !== false);
+  const roundedLat = hasCoords ? Number(params.lat.toFixed(4)) : 0;
+  const roundedLon = hasCoords ? Number(params.lon.toFixed(4)) : 0;
+
   return useQuery<ApiResponse<PlacesSearchResponse>, ApiError>({
-    queryKey: QUERY_KEYS.places(params.lat, params.lon, params.category),
-    queryFn: () => urbanLensApi.getPlaces(params),
-    enabled: Boolean(params.lat !== undefined && params.lon !== undefined),
+    queryKey: QUERY_KEYS.places(roundedLat, roundedLon, params.category),
+    queryFn: () => urbanLensApi.getPlaces({ ...params, lat: roundedLat, lon: roundedLon }),
+    enabled: isEnabled,
     staleTime: 10 * 60_000,
   });
 }
 
 export function useCityIntelligence(cityId: string, q?: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<IntelligenceQueryResponse>, ApiError>({
-    queryKey: QUERY_KEYS.intelligence(cityId, q),
-    queryFn: () => urbanLensApi.getCityIntelligence(cityId, q),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.intelligence(normId, q),
+    queryFn: () => urbanLensApi.getCityIntelligence(normId, q),
+    enabled: Boolean(normId),
     staleTime: 5 * 60_000,
   });
 }
@@ -195,29 +211,32 @@ export function useSupportedCurrencies() {
 }
 
 export function useCityAirQualityLive(cityId: string) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<LiveAirQualityResponse>, ApiError>({
-    queryKey: QUERY_KEYS.airQualityLive(cityId),
-    queryFn: () => urbanLensApi.getCityAirQualityLive(cityId),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.airQualityLive(normId),
+    queryFn: () => urbanLensApi.getCityAirQualityLive(normId),
+    enabled: Boolean(normId),
     staleTime: 3 * 60_000,
     refetchOnWindowFocus: false,
   });
 }
 
 export function useCityEducation(cityId: string, type?: string, page: number = 1, pageSize: number = 25) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<CityEducationResponse>, ApiError>({
-    queryKey: QUERY_KEYS.education(cityId, type, page),
-    queryFn: () => urbanLensApi.getCityEducation(cityId, type, page, pageSize),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.education(normId, type, page),
+    queryFn: () => urbanLensApi.getCityEducation(normId, type, page, pageSize),
+    enabled: Boolean(normId),
     staleTime: 10 * 60_000,
   });
 }
 
 export function useCityHealthcare(cityId: string, category?: string, radius: number = 5000, limit: number = 30) {
+  const normId = normalizeCityId(cityId);
   return useQuery<ApiResponse<CityHealthcareResponse>, ApiError>({
-    queryKey: QUERY_KEYS.healthcare(cityId, category),
-    queryFn: () => urbanLensApi.getCityHealthcare(cityId, category, radius, limit),
-    enabled: Boolean(cityId),
+    queryKey: QUERY_KEYS.healthcare(normId, category),
+    queryFn: () => urbanLensApi.getCityHealthcare(normId, category, radius, limit),
+    enabled: Boolean(normId),
     staleTime: 10 * 60_000,
   });
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUrban } from '../context/UrbanContext';
 import {
   Radio,
@@ -7,9 +7,19 @@ import {
 } from 'lucide-react';
 import { DataTrustBadge } from '../components/common/DataTrustBadge';
 
-export const LivePulsePage: React.FC = () => {
+export interface LivePulsePageProps {
+  initialCategory?: string;
+}
+
+export const LivePulsePage: React.FC<LivePulsePageProps> = ({ initialCategory = 'ALL' }) => {
   const { pulseStreams, currentCity, navigate } = useUrban();
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   const categories = ['ALL', 'TRAFFIC', 'AIR QUALITY', 'ENERGY', 'WATER', 'TRANSIT'];
 

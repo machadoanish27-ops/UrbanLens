@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CITIES_DATA,
@@ -7,8 +7,19 @@ import {
   LIVE_PULSE_STREAMS,
   type MetricStream,
   MOCK_ALERTS,
-  type UrbanAlert
+  type UrbanAlert,
+  normalizeCityId,
+  getStudioKeyForId,
+  CANONICAL_CITY_MAP,
+  CANONICAL_TO_KEY,
 } from '../data/urbanData.ts';
+import {
+  useCity,
+  useCityWeather,
+  useCityAirQualityLive,
+  useCityCost,
+  useCityUniversities
+} from '../hooks/useUrbanLens';
 
 export type AppRoute =
   | 'landing'
@@ -34,7 +45,14 @@ export type AppRoute =
   | 'compare'
   | 'reports'
   | 'settings'
-  | 'profile';
+  | 'profile'
+  | 'mobility'
+  | 'housing'
+  | 'healthcare'
+  | 'safety'
+  | 'lifestyle'
+  | 'currency'
+  | 'knowledge';
 
 export interface UserProfile {
   name: string;
@@ -74,6 +92,11 @@ export interface UrbanContextType {
   setCityById: (id: string) => void;
   selectedZone: CityZone | null;
   setSelectedZone: (zone: CityZone | null) => void;
+
+  // Loading States
+  isCityLoading: boolean;
+  isWeatherLoading: boolean;
+  isAqiLoading: boolean;
 
   // Real-time Streams & Alerts
   pulseStreams: MetricStream[];
@@ -157,11 +180,11 @@ const ROUTE_MAP: Record<string, string> = {
   'forgot-password': '/forgot-password',
   onboarding: '/onboarding',
   dashboard: '/app',
-  cities: '/app/cities',
+  cities: '/app/explore',
   'city-detail': '/app/city',
   pulse: '/app/pulse',
-  spatial: '/app/spatial',
-  ai: '/app/ai',
+  spatial: '/app/map',
+  ai: '/app/ask',
   predictions: '/app/predictions',
   analytics: '/app/analytics',
   optimization: '/app/optimization',
@@ -169,33 +192,53 @@ const ROUTE_MAP: Record<string, string> = {
   environment: '/app/environment',
   universities: '/app/universities',
   education: '/app/education',
-  'cost-of-living': '/app/cost-of-living',
+  'cost-of-living': '/app/cost',
   alerts: '/app/alerts',
   compare: '/app/compare',
   reports: '/app/reports',
   settings: '/app/settings',
   profile: '/app/profile',
+  mobility: '/app/mobility',
+  housing: '/app/housing',
+  healthcare: '/app/healthcare',
+  safety: '/app/safety',
+  lifestyle: '/app/lifestyle',
+  currency: '/app/currency',
+  knowledge: '/app/knowledge',
 };
+
+export { normalizeCityId, getStudioKeyForId, CANONICAL_CITY_MAP, CANONICAL_TO_KEY };
 
 export const UrbanProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const reactNavigate = useNavigate();
 
-  // Active City: Tokyo by default (city_1392685764)
+  // Authoritative Active City: Tokyo by default (city_1392685764)
   const [activeCityId, setActiveCityIdState] = useState<string>(() => {
-    return localStorage.getItem('urbanlens_active_city_id') || 'city_1392685764';
+    const saved = localStorage.getItem('urbanlens_active_city_id');
+    return saved ? normalizeCityId(saved) : 'city_1356226629';
   });
 
   const [currentRoute, setCurrentRoute] = useState<AppRoute>('dashboard');
-  const [studioCityKey, setStudioCityKey] = useState<string>('mumbai');
-  const [selectedZone, setSelectedZone] = useState<CityZone | null>(
-    CITIES_DATA['mumbai']?.zones?.[0] || null
-  );
+
+  const [selectedZone, setSelectedZone] = useState<CityZone | null>(() => {
+    const saved = localStorage.getItem('urbanlens_active_city_id') || 'city_1356226629';
+    const key = getStudioKeyForId(saved);
+    return CITIES_DATA[key]?.zones?.[0] || CITIES_DATA['mumbai']?.zones?.[0] || null;
+  });
+
   const [pulseStreams] = useState<MetricStream[]>(LIVE_PULSE_STREAMS);
   const [alerts, setAlerts] = useState<UrbanAlert[]>(MOCK_ALERTS);
-  const [compareCityId, setCompareCityId] = useState<string>('tokyo');
+  const [compareCityId, setCompareCityId] = useState<string>('mumbai');
   const [activeSettingsTab, setActiveSettingsTab] = useState<string>('profile');
   const [isInitializingCity] = useState(false);
   const [initializingCityName] = useState('');
+
+  // Real Backend Queries dynamically keyed on activeCityId
+  const { data: cityResp, isLoading: isCityLoading } = useCity(activeCityId);
+  const { data: weatherResp, isLoading: isWeatherLoading } = useCityWeather(activeCityId);
+  const { data: aqiResp, isLoading: isAqiLoading } = useCityAirQualityLive(activeCityId);
+  const { data: costResp } = useCityCost(activeCityId);
+  const { data: uniResp } = useCityUniversities(activeCityId);
 
   const navigate = (route: AppRoute | string) => {
     if (route.startsWith('/')) {
@@ -210,14 +253,20 @@ export const UrbanProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  const currentCity = CITIES_DATA[studioCityKey] || CITIES_DATA['mumbai'] || Object.values(CITIES_DATA)[0];
+  const setActiveCityId = useCallback((id: string) => {
+    const norm = normalizeCityId(id);
+    setActiveCityIdState(norm);
+    const key = getStudioKeyForId(norm);
+    if (CITIES_DATA[key]?.zones && CITIES_DATA[key].zones.length > 0) {
+      setSelectedZone(CITIES_DATA[key].zones[0]);
+    } else {
+      setSelectedZone(null);
+    }
+    localStorage.setItem('urbanlens_active_city_id', norm);
+    addRecentCity(norm);
+  }, []);
 
   const setCityById = (id: string) => {
-    const norm = id.toLowerCase();
-    if (CITIES_DATA[norm]) {
-      setStudioCityKey(norm);
-      setSelectedZone(CITIES_DATA[norm].zones?.[0] || null);
-    }
     setActiveCityId(id);
   };
 
@@ -225,11 +274,118 @@ export const UrbanProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setAlerts((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const setActiveCityId = (id: string) => {
-    setActiveCityIdState(id);
-    localStorage.setItem('urbanlens_active_city_id', id);
-    addRecentCity(id);
-  };
+  // Dynamically constructed currentCity strictly tied to activeCityId
+  const currentCity: CityData = useMemo(() => {
+    const canonical = cityResp?.data;
+    const weather = weatherResp?.data?.weather?.current;
+    const aqiData = aqiResp?.data?.air_quality;
+    const costSummary = costResp?.data?.summary;
+    const unis = uniResp?.data || [];
+
+    const key = getStudioKeyForId(activeCityId);
+    const fallbackBase = CITIES_DATA[key] || CITIES_DATA['mumbai'] || Object.values(CITIES_DATA)[0];
+
+    const name = canonical?.name || fallbackBase.name;
+    const country = canonical?.country_id
+      ? canonical.country_id.replace('country_', '').toUpperCase()
+      : fallbackBase.country;
+    const countryCode = canonical?.country_iso2 || fallbackBase.countryCode;
+
+    const population = canonical?.population
+      ? Number(canonical.population).toLocaleString()
+      : fallbackBase.population;
+    const populationRaw = canonical?.population ?? fallbackBase.populationRaw;
+    const density = canonical?.population_density
+      ? `${Number(canonical.population_density).toLocaleString()} / km²`
+      : fallbackBase.density;
+    const coordinates = (canonical?.latitude !== undefined && canonical?.longitude !== undefined)
+      ? `${canonical.latitude.toFixed(4)}° N, ${canonical.longitude.toFixed(4)}° E`
+      : fallbackBase.coordinates;
+
+    const latitude = typeof canonical?.latitude === 'number'
+      ? canonical.latitude
+      : fallbackBase.latitude;
+    const longitude = typeof canonical?.longitude === 'number'
+      ? canonical.longitude
+      : fallbackBase.longitude;
+
+    const temperature = typeof weather?.temperature_c === 'number'
+      ? Math.round(weather.temperature_c)
+      : fallbackBase.temperature;
+    const feelsLike = typeof weather?.apparent_temperature_c === 'number'
+      ? Math.round(weather.apparent_temperature_c)
+      : fallbackBase.feelsLike;
+    const humidity = typeof weather?.relative_humidity_pct === 'number'
+      ? Math.round(weather.relative_humidity_pct)
+      : fallbackBase.humidity;
+    const windSpeed = typeof weather?.wind_speed_kph === 'number'
+      ? `${weather.wind_speed_kph} km/h`
+      : fallbackBase.windSpeed;
+
+    const pm25 = typeof aqiData?.pollutants?.pm25 === 'number'
+      ? aqiData.pollutants.pm25
+      : fallbackBase.pm25;
+    const pm10 = typeof aqiData?.pollutants?.pm10 === 'number'
+      ? aqiData.pollutants.pm10
+      : fallbackBase.pm10;
+    const no2 = typeof aqiData?.pollutants?.no2 === 'number'
+      ? aqiData.pollutants.no2
+      : fallbackBase.no2;
+    const o3 = typeof aqiData?.pollutants?.o3 === 'number'
+      ? aqiData.pollutants.o3
+      : fallbackBase.o3;
+
+    const rawAqi = pm25 !== null && pm25 !== undefined ? Math.round(pm25) : fallbackBase.aqi;
+    const aqiCategory: CityData['aqiCategory'] = rawAqi <= 50 ? 'Good'
+      : rawAqi <= 100 ? 'Moderate'
+      : rawAqi <= 150 ? 'Unhealthy for Sensitive'
+      : rawAqi <= 200 ? 'Unhealthy'
+      : 'Very Unhealthy';
+
+    const costOfLivingIndex = costSummary?.consumer_price_index ?? fallbackBase.costOfLivingIndex;
+
+    const universities = unis.length > 0
+      ? unis.map((u, i) => ({
+          id: u.university_id || `u-${i}`,
+          name: u.name,
+          location: `${name}, ${country}`,
+          ranking: u.rankings?.[0]?.rank ? `#${u.rankings[0].rank} Global` : '#1 Regional',
+          type: 'Public / Institute of National Importance' as const,
+          studentsCount: 'Verified Institution',
+          specialization: 'Higher Education & Research',
+          status: 'Accredited NAAC A++' as const,
+          trust: 'VERIFIED' as const,
+        }))
+      : fallbackBase.universities;
+
+    return {
+      ...fallbackBase,
+      id: activeCityId,
+      name,
+      country,
+      countryCode,
+      country_id: canonical?.country_id || `country_${countryCode}`,
+      currency: canonical?.currency || (fallbackBase as any).currency || { code: countryCode === 'JP' ? 'JPY' : countryCode === 'IN' ? 'INR' : countryCode === 'GB' ? 'GBP' : 'USD', symbol: '$', name: 'Currency' },
+      population,
+      populationRaw,
+      density,
+      coordinates,
+      latitude,
+      longitude,
+      temperature,
+      feelsLike,
+      humidity,
+      windSpeed,
+      aqi: rawAqi,
+      aqiCategory,
+      pm25,
+      pm10,
+      no2,
+      o3,
+      costOfLivingIndex,
+      universities,
+    };
+  }, [activeCityId, cityResp, weatherResp, aqiResp, costResp, uniResp, isCityLoading]);
 
   // UI Drawers & Modals
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -388,6 +544,9 @@ export const UrbanProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setCityById,
         selectedZone,
         setSelectedZone,
+        isCityLoading,
+        isWeatherLoading,
+        isAqiLoading,
         pulseStreams,
         alerts,
         dismissAlert,

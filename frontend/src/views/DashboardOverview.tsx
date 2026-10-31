@@ -34,14 +34,14 @@ export const DashboardOverview: React.FC = () => {
             {currentCity.name} Intelligence Center
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 font-sans mt-1 max-w-2xl leading-relaxed">
-            Real-time urban intelligence across mobility, environment, infrastructure, and human activity.
+            Real-time urban intelligence across mobility, environment, infrastructure, and human activity for {currentCity.name}.
           </p>
         </div>
 
         {/* Quick Command Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => navigate('spatial')}
+            onClick={() => navigate('map')}
             className="px-3.5 py-2 rounded-xl bg-[#07111F] border border-[#1E334A] hover:border-cyan-500/40 text-xs font-mono text-slate-200 transition-colors flex items-center gap-1.5"
           >
             <Compass className="w-3.5 h-3.5 text-cyan-400" />
@@ -64,7 +64,7 @@ export const DashboardOverview: React.FC = () => {
         </div>
       </div>
 
-      {/* 6 High-Fidelity Primary Metric Cards (Section 7) */}
+      {/* 6 High-Fidelity Primary Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* 1. Population */}
         <MetricCard
@@ -75,11 +75,11 @@ export const DashboardOverview: React.FC = () => {
           trend="up"
           icon={Users}
           sparkline={[20.4, 20.7, 21.0, 21.1, 21.2, 21.3, 21.35]}
-          source="Census & Telecom Micro-grid"
+          source="Census & Canonical Demographics"
           updateTime="00:00 UTC"
           trust="VERIFIED"
           accentColor="blue"
-          detailNote={`Density: ${currentCity.density}. High concentration in suburban transit nodes.`}
+          detailNote={`Density: ${currentCity.density}. Metropolitan concentration in ${currentCity.name}.`}
           onClick={() => navigate('analytics')}
         />
 
@@ -92,11 +92,11 @@ export const DashboardOverview: React.FC = () => {
           trend="down"
           icon={Wind}
           sparkline={[172, 168, 164, 160, 159, 158, 158]}
-          source="Municipal Laser Gas Spectrometry"
+          source="Global AQ & WHO Registry"
           updateTime="14:30 UTC"
           trust="LIVE"
           accentColor={currentCity.aqi > 150 ? 'rose' : currentCity.aqi > 100 ? 'amber' : 'emerald'}
-          detailNote={`PM2.5: ${currentCity.pm25} µg/m³ · PM10: ${currentCity.pm10} µg/m³. Coastal sea-breeze transition active.`}
+          detailNote={`PM2.5: ${currentCity.pm25} µg/m³ · PM10: ${currentCity.pm10} µg/m³. Active observation in ${currentCity.name}.`}
           onClick={() => navigate('environment')}
         />
 
@@ -109,11 +109,11 @@ export const DashboardOverview: React.FC = () => {
           trend="up"
           icon={Thermometer}
           sparkline={[28, 29, 30, 31, 31, 31, 31]}
-          source="Doppler Surface Weather Stations"
+          source="Open-Meteo Doppler Weather"
           updateTime="14:32 UTC"
           trust="LIVE"
           accentColor="amber"
-          detailNote={`Humidity: ${currentCity.humidity}% · Wind: ${currentCity.windSpeed}. Urban heat island delta +2.8°C.`}
+          detailNote={`Humidity: ${currentCity.humidity}% · Wind: ${currentCity.windSpeed}. Surface weather in ${currentCity.name}.`}
           onClick={() => navigate('environment')}
         />
 
@@ -130,8 +130,8 @@ export const DashboardOverview: React.FC = () => {
           updateTime="14:32 UTC"
           trust="LIVE"
           accentColor="cyan"
-          detailNote="Western Express Corridor & BKC connector experiencing high load approaching evening peak."
-          onClick={() => navigate('spatial')}
+          detailNote={`Primary arterial corridors in ${currentCity.name} operating under monitored telemetry load.`}
+          onClick={() => navigate('map')}
         />
 
         {/* 5. Universities */}
@@ -139,15 +139,15 @@ export const DashboardOverview: React.FC = () => {
           title="Higher Ed"
           value={`${currentCity.universities.length}`}
           unit="institutions"
-          change="NIRF Top"
+          change="Accredited"
           trend="neutral"
           icon={GraduationCap}
           sparkline={[6, 6, 6, 6, 6, 6, 6]}
-          source="Higher Education Accreditation Council"
+          source="National Higher Education Registry"
           updateTime="Annual 2026"
           trust="VERIFIED"
           accentColor="violet"
-          detailNote="Includes IIT Bombay, University of Mumbai, TIFR, VJTI, and ICT."
+          detailNote={currentCity.universities.length > 0 ? `Includes ${currentCity.universities.slice(0, 3).map((u: any) => u.name).join(', ')}.` : `Academic institutions in ${currentCity.name}.`}
           onClick={() => navigate('universities')}
         />
 
@@ -164,8 +164,8 @@ export const DashboardOverview: React.FC = () => {
           updateTime="Q3 2026"
           trust={currentCity.costOfLivingIndex ? 'VERIFIED' : 'DATA UNAVAILABLE'}
           accentColor={currentCity.costOfLivingIndex ? 'emerald' : 'rose'}
-          detailNote={currentCity.costOfLivingIndex ? 'Housing index 24.8. Rent-to-income ratio optimal for technical talent.' : 'UrbanLens does not currently have verified city-level cost data.'}
-          onClick={() => navigate('cost-of-living')}
+          detailNote={currentCity.costOfLivingIndex ? `Relative expenditure index for ${currentCity.name} normalized against NYC.` : `UrbanLens does not currently have verified city-level cost data for ${currentCity.name}.`}
+          onClick={() => navigate('cost')}
         />
       </div>
 
@@ -174,26 +174,22 @@ export const DashboardOverview: React.FC = () => {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold font-mono uppercase text-white tracking-wider">
-              SPATIAL CORRIDORS & ANOMALY SURVEILLANCE
+              SPATIAL CORRIDORS & ANOMALY SURVEILLANCE · {currentCity.name}
             </h2>
             <DataTrustBadge status="LIVE" size="sm" />
           </div>
-          <button
-            onClick={() => navigate('spatial')}
-            className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-          >
-            <span>FULL OPERATIONAL SPATIAL DESK</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <span className="text-xs font-mono text-slate-400">
+            COORDINATES: {currentCity.coordinates}
+          </span>
         </div>
 
-        <CityMapCanvas heightClass="h-[520px]" />
+        <CityMapCanvas cityId={currentCity.id} />
       </div>
 
-      {/* Bottom Section: Active Anomalies & Multi-Zone Pulse */}
+      {/* Two Column Grid: Active Alerts (Left 2 Col) + Quick AI Insight (Right 1 Col) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Active Telemetry Alerts */}
-        <div className="lg:col-span-2 rounded-2xl bg-[#0B1726]/80 border border-[#1E334A] p-5 space-y-4">
+        {/* Left 2 Cols: Active Urban Telemetry Alerts */}
+        <div className="lg:col-span-2 rounded-2xl bg-[#0B1726] border border-[#1E334A] p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-[#1E334A] pb-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400" />
@@ -272,14 +268,14 @@ export const DashboardOverview: React.FC = () => {
               <div>
                 <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">CORRIDOR ANOMALY</span>
                 <p className="text-white font-medium mt-0.5">
-                  Bandra West and Western Express Highway converging at 72% flow saturation.
+                  {currentCity.name} primary urban transit corridor and central connectors converging at 72% flow saturation.
                 </p>
               </div>
 
               <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30">
                 <span className="text-[10px] font-mono text-purple-300 font-bold uppercase">PREDICTIVE IMPACT</span>
                 <p className="text-slate-200 mt-1">
-                  Queue length expected to hit 2.1 km by 18:00 unless signal cycle duration is modified.
+                  Peak queue accumulation expected during commute windows unless signal timing is dynamically adjusted.
                 </p>
               </div>
             </div>

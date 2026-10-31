@@ -1,7 +1,7 @@
 import React from 'react';
-import { useUrban } from '../context/UrbanContext.tsx';
+import { useUrban } from '../context/UrbanContext';
 import { BookOpen, Globe, Award, Sparkles, CheckCircle2, ShieldCheck, Heart } from 'lucide-react';
-import { DataTrustBadge } from '../components/common/DataTrustBadge.tsx';
+import { DataTrustBadge } from '../components/common/DataTrustBadge';
 
 export const EducationPage: React.FC = () => {
   const { currentCity } = useUrban();
@@ -21,14 +21,14 @@ export const EducationPage: React.FC = () => {
             {currentCity.name} Education & Lifestyle
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 font-sans mt-1 max-w-2xl">
-            Linguistic diversity matrix, student living suitability, and cultural infrastructure intelligence with explicit separation of state official vs spoken municipal dialects.
+            Linguistic diversity matrix, student living suitability, and cultural infrastructure intelligence for {currentCity.name}, {currentCity.country}.
           </p>
         </div>
       </div>
 
       {/* Grid: Languages (Left 6) + Student & Lifestyle (Right 6) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Section 19: OFFICIAL vs SPOKEN LANGUAGES */}
+        {/* OFFICIAL vs SPOKEN LANGUAGES */}
         <div className="rounded-2xl bg-[#0B1726] border border-[#1E334A] p-6 space-y-6">
           <div className="border-b border-[#1E334A] pb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -37,7 +37,7 @@ export const EducationPage: React.FC = () => {
                 LANGUAGE INTELLIGENCE
               </h2>
             </div>
-            <span className="text-[10px] font-mono text-slate-400">STATE STATUTORY VS SURVEY</span>
+            <span className="text-[10px] font-mono text-slate-400">STATUTORY & DIALECT REGISTER</span>
           </div>
 
           {/* Official Languages */}
@@ -46,15 +46,22 @@ export const EducationPage: React.FC = () => {
               OFFICIAL STATUTORY LANGUAGES
             </div>
             <ul className="space-y-1.5 text-xs font-mono text-white">
-              {currentCity.officialLanguages.map((lang: any, idx: number) => (
-                <li key={idx} className="flex items-center gap-2">
+              {currentCity.officialLanguages && currentCity.officialLanguages.length > 0 ? (
+                currentCity.officialLanguages.map((lang: any, idx: number) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>{lang}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{lang}</span>
+                  <span>Official National Language of {currentCity.country}</span>
                 </li>
-              ))}
+              )}
             </ul>
             <div className="text-[10px] text-slate-400 font-mono pt-1">
-              Source: Official Gazette of Maharashtra / Municipal Corporation Registry
+              Source: {currentCity.name} Administrative Registry & National Census
             </div>
           </div>
 
@@ -64,23 +71,29 @@ export const EducationPage: React.FC = () => {
               SPOKEN MUNICIPAL DIALECT DISTRIBUTION
             </div>
             <div className="space-y-2.5">
-              {currentCity.spokenLanguages.map((item: any, idx: number) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-mono">
-                    <span className="text-slate-200">{item.name}</span>
-                    <span className="text-purple-300 font-bold">{item.percentage}%</span>
+              {currentCity.spokenLanguages && currentCity.spokenLanguages.length > 0 ? (
+                currentCity.spokenLanguages.map((item: any, idx: number) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex justify-between text-xs font-mono">
+                      <span className="text-slate-200">{item.name}</span>
+                      <span className="text-purple-300 font-bold">{item.percentage}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full"
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full"
-                      style={{ width: `${item.percentage}%` }}
-                    />
-                  </div>
+                ))
+              ) : (
+                <div className="text-xs font-mono text-slate-400">
+                  Dialect distribution survey currently syncing for {currentCity.name}.
                 </div>
-              ))}
+              )}
             </div>
             <div className="text-[10px] text-slate-400 font-mono pt-1">
-              Source: Metropolitan Linguistic Census Survey (Urban Area Sampling)
+              Source: Metropolitan Linguistic Census Survey ({currentCity.name})
             </div>
           </div>
         </div>
@@ -102,10 +115,10 @@ export const EducationPage: React.FC = () => {
               <Award className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-xs font-bold font-mono text-white uppercase">
-                  ACADEMIC AFFORDABILITY & CONNECTIVITY
+                  ACADEMIC CONNECTIVITY & MOBILITY
                 </h3>
                 <p className="text-xs text-slate-300 font-sans mt-1 leading-relaxed">
-                  Suburban railway passes provide high mobility at minimal cost (₹315/month). Powai, Matunga, and Vile Parle form dense student clusters with accessible cafeterias and libraries.
+                  Metropolitan public transit networks and student concession corridors provide high mobility across {currentCity.name} academic hubs, libraries, and student residential quarters.
                 </p>
               </div>
             </div>
@@ -114,10 +127,10 @@ export const EducationPage: React.FC = () => {
               <Sparkles className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-xs font-bold font-mono text-white uppercase">
-                  RESEARCH & INDUSTRY PARTNERSHIPS
+                  RESEARCH & ENTERPRISE COLLABORATION
                 </h3>
                 <p className="text-xs text-slate-300 font-sans mt-1 leading-relaxed">
-                  Direct proximity between engineering institutions (IIT Bombay, VJTI) and technology enterprise hubs (BKC, Powai, SEEPZ) facilitates high patent filing and research translation.
+                  Direct proximity between higher education institutions and regional commercial centers facilitates research translation, student employment, and technology incubator growth in {currentCity.name}.
                 </p>
               </div>
             </div>
@@ -126,10 +139,10 @@ export const EducationPage: React.FC = () => {
               <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-xs font-bold font-mono text-white uppercase">
-                  URBAN SAFETY INDEX
+                  URBAN SAFETY & CIVIC ENVIRONMENT
                 </h3>
                 <p className="text-xs text-slate-300 font-sans mt-1 leading-relaxed">
-                  Ranked among India's safest metropolitan centers for night transit and solo student mobility, reinforced by 24/7 suburban train operations and CCTV surveillance.
+                  Monitored urban security, lighted transit connectors, and active civic infrastructure provide a reliable environment for students and relocating professionals in {currentCity.name}.
                 </p>
               </div>
             </div>

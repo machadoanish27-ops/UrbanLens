@@ -1,3 +1,4 @@
+import asyncio
 """Currency exchange and conversion service layer."""
 
 from datetime import datetime, timezone
@@ -79,6 +80,42 @@ class CurrencyService:
         clean_from = from_currency.strip().upper()
         clean_to = to_currency.strip().upper()
 
+        if clean_from == clean_to and len(clean_from) == 3:
+            today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            return {
+                "from_currency": clean_from,
+                "to_currency": clean_to,
+                "base_currency": clean_from,
+                "quote_currency": clean_to,
+                "amount": amount,
+                "rate": 1.0,
+                "inverse_rate": 1.0,
+                "converted_amount": amount,
+                "provider": "parity",
+                "source": "Local Parity Matrix",
+                "status": "fresh",
+                "observed_at": today_str,
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "last_updated": today_str,
+                "usd_benchmark_base": {"currency": clean_from, "rate_to_usd": 1.0, "usd_to_currency": 1.0, "label": "USD benchmark"},
+                "usd_benchmark_quote": {"currency": clean_to, "rate_to_usd": 1.0, "usd_to_currency": 1.0, "label": "USD benchmark"},
+                "conversion": {
+                    "from_currency": clean_from,
+                    "to_currency": clean_to,
+                    "amount": amount,
+                    "rate": 1.0,
+                    "converted_amount": amount,
+                    "date": today_str,
+                },
+                "meta": {
+                    "provider": "parity",
+                    "source": "Local Parity Matrix",
+                    "status": "fresh",
+                    "observed_at": today_str,
+                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                },
+            }
+
         if len(clean_from) != 3 or len(clean_to) != 3:
             return {
                 "from_currency": clean_from,
@@ -153,8 +190,19 @@ class CurrencyService:
             bench_base = None
             bench_quote = None
             if include_benchmarks:
-                bench_base = await self.get_usd_benchmark(clean_from)
-                bench_quote = await self.get_usd_benchmark(clean_to)
+                try:
+                    bench_res = await asyncio.wait_for(
+                        asyncio.gather(
+                            self.get_usd_benchmark(clean_from),
+                            self.get_usd_benchmark(clean_to),
+                            return_exceptions=True
+                        ),
+                        timeout=2.0
+                    )
+                    bench_base = bench_res[0] if not isinstance(bench_res[0], Exception) else None
+                    bench_quote = bench_res[1] if not isinstance(bench_res[1], Exception) else None
+                except Exception as exc:
+                    logger.debug("Benchmark calculation error or timeout: %s", exc)
 
             result = {
                 "from_currency": clean_from,

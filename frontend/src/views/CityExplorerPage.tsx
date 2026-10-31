@@ -28,7 +28,7 @@ export const CityExplorerPage: React.FC = () => {
 
   const handleSelectCity = (id: string) => {
     setCityById(id);
-    navigate('city-detail');
+    navigate(`/app/city/${id}`);
   };
 
   const seedCities = Object.values(CITIES_DATA);

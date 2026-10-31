@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUrban } from '../../context/UrbanContext';
 import { useOriginDestination } from '../../context/OriginDestinationContext';
-import { useCity, useCities } from '../../hooks/useUrbanLens';
+import { useCities } from '../../hooks/useUrbanLens';
 import {
   Search,
   Sparkles,
@@ -21,6 +21,7 @@ export const GlobalTopBar: React.FC<GlobalTopBarProps> = ({ onToggleSidebar }) =
   const {
     activeCityId,
     setActiveCityId,
+    currentCity,
     toggleAiModal,
     toggleCommandPalette,
     toggleNotifications,
@@ -30,9 +31,7 @@ export const GlobalTopBar: React.FC<GlobalTopBarProps> = ({ onToggleSidebar }) =
 
   const { origin, destination, openOriginModal } = useOriginDestination();
   const navigate = useNavigate();
-
-  const { data: cityResp } = useCity(activeCityId);
-  const currentCity = cityResp?.data;
+  const location = useLocation();
 
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState('');
@@ -83,7 +82,7 @@ export const GlobalTopBar: React.FC<GlobalTopBarProps> = ({ onToggleSidebar }) =
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 font-mono hidden md:block truncate">
-                {currentCity?.country_id?.replace('country_', '') || 'JP'} · {currentCity?.currency?.code || 'JPY'}
+                {currentCity?.country_id?.replace('country_', '') || currentCity?.countryCode || currentCity?.country || 'JP'} · {currentCity?.currency?.code || 'JPY'}
               </div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1 group-hover:text-cyan-400 transition-colors shrink-0" />
@@ -112,7 +111,7 @@ export const GlobalTopBar: React.FC<GlobalTopBarProps> = ({ onToggleSidebar }) =
               </div>
 
               <div className="max-h-60 overflow-y-auto space-y-0.5">
-                {(searchResults?.data || popularCities).map((c: any) => {
+                {(citySearchQuery.trim().length >= 2 ? (searchResults?.data || []) : popularCities).map((c: any) => {
                   const id = c.city_id || c.id;
                   const name = c.name;
                   const country = c.country_id || c.country;
@@ -124,6 +123,9 @@ export const GlobalTopBar: React.FC<GlobalTopBarProps> = ({ onToggleSidebar }) =
                         setActiveCityId(id);
                         setIsCityDropdownOpen(false);
                         setCitySearchQuery('');
+                        if (location.pathname.startsWith('/app/city/')) {
+                          navigate(`/app/city/${id}`);
+                        }
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-colors ${
                         isSelected
