@@ -61,3 +61,4 @@ scripts/qa/screenshots/
 scripts/qa/qa_results.json
 scratch/
 
+qa_evidence/
