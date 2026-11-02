@@ -16,7 +16,7 @@ from app.api.routes.routing import router as routing_router
 from app.api.routes.transit import router as transit_router
 from app.api.routes.universities import router as universities_router
 from app.api.routes.education import router as education_router
-from app.api.routes.healthcare import router as healthcare_router
+from app.api.routes.healthcare import router as healthcare_router, nearby_router as healthcare_nearby_router
 from app.api.routes.weather import router as weather_router
 from app.services.orchestrator import AgentOrchestrator
 
@@ -46,6 +46,7 @@ api_v1_router.include_router(transit_router)
 api_v1_router.include_router(universities_router)
 api_v1_router.include_router(education_router)
 api_v1_router.include_router(healthcare_router)
+api_v1_router.include_router(healthcare_nearby_router)
 api_v1_router.include_router(intelligence_router)
 api_v1_router.include_router(knowledge_router)
 

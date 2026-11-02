@@ -60,5 +60,21 @@ frontend/dist/
 scripts/qa/screenshots/
 scripts/qa/qa_results.json
 scratch/
-
 qa_evidence/
+
+# Large data files & raw ingestion archives (>100MB GitHub limit)
+data/raw/**
+!data/raw/
+!data/raw/healthcare/
+!data/raw/healthcare/kaggle/
+!data/raw/healthcare/kaggle/DATASET_METADATA.json
+
+data/processed/**
+!data/processed/
+!data/processed/healthcare/
+!data/processed/healthcare/kaggle/
+!data/processed/healthcare/kaggle/DATASET_PROFILING_REPORT.json
+!data/processed/healthcare/kaggle/DATASET_PROFILING_REPORT.md
+!data/processed/healthcare/kaggle/healthcare_cleaning_report.json
+
+data/rejected/

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { CityDetailResponse, WeatherCurrent } from '../types/api';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { normalizeCityId, getStudioKeyForId, CITIES_DATA } from '../data/urbanData';
 import { useUrban } from '../context/UrbanContext';
 import { useOriginDestination } from '../context/OriginDestinationContext';
@@ -16,6 +16,7 @@ import {
 } from '../hooks/useUrbanLens';
 import { CityMapCanvas } from '../components/common/CityMapCanvas';
 import { DataTrustBadge } from '../components/common/DataTrustBadge';
+import { InteractiveMap, type MapMarkerItem } from '../components/InteractiveMap';
 import {
   Users,
   Wind,
@@ -28,7 +29,10 @@ import {
   HeartPulse,
   ArrowRightLeft,
   ExternalLink,
-  MapPin
+  MapPin,
+  Phone,
+  Crosshair,
+  Search
 } from 'lucide-react';
 
 type TabType = 'overview' | 'environment' | 'education' | 'healthcare' | 'economy' | 'relocation' | 'ai';
@@ -40,6 +44,7 @@ export interface CityDetailPageProps {
 export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'overview' }) => {
   const { cityId: urlCityId } = useParams<{ cityId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { activeCityId, setActiveCityId, currentCity, toggleAiModal } = useUrban();
   const { origin, destination, setDestination, openOriginModal } = useOriginDestination();
 
@@ -59,10 +64,13 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
   useEffect(() => {
-    if (initialTab) {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['overview', 'environment', 'education', 'healthcare', 'economy', 'relocation', 'ai'].includes(tabParam)) {
+      setActiveTab(tabParam as TabType);
+    } else if (initialTab) {
       setActiveTab(initialTab);
     }
-  }, [initialTab]);
+  }, [initialTab, searchParams]);
 
   // Real Backend Queries
   const { data: cityResp } = useCity(cityId);
@@ -141,8 +149,63 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
     purchasing_power_index: null,
   } : undefined);
   const institutions = eduResp?.data?.institutions || [];
-  const facilities = healthResp?.data?.facilities || [];
+  const facilities = useMemo(() => {
+    return healthResp?.data?.facilities || healthResp?.data?.items || [];
+  }, [healthResp?.data]);
   const agents = intelResp?.data?.results || [];
+
+  // Healthcare Discovery State
+  const [healthCategory, setHealthCategory] = useState<string>('all');
+  const [healthSearch, setHealthSearch] = useState<string>('');
+
+  const healthcareTotal = healthResp?.data?.total ?? facilities.length;
+  const hospitalCount = useMemo(() => facilities.filter(f => (f.type || '').toLowerCase().includes('hospital')).length, [facilities]);
+  const clinicCount = useMemo(() => facilities.filter(f => (f.type || '').toLowerCase().includes('clinic')).length, [facilities]);
+  const healthCenterCount = useMemo(() => facilities.filter(f => (f.type || '').toLowerCase().includes('health_center') || (f.type || '').toLowerCase().includes('health center')).length, [facilities]);
+  const pharmacyCount = useMemo(() => facilities.filter(f => (f.type || '').toLowerCase().includes('pharmacy') || (f.type || '').toLowerCase().includes('chemist')).length, [facilities]);
+  const emergencyCount = useMemo(() => facilities.filter(f => f.emergency === true || (typeof f.emergency === 'string' && ['yes', 'true'].includes((f.emergency as string).toLowerCase()))).length, [facilities]);
+
+  const filteredHealthcareFacilities = useMemo(() => {
+    let list = facilities;
+    if (healthCategory !== 'all') {
+      if (healthCategory === 'hospital') {
+        list = list.filter(f => (f.type || '').toLowerCase().includes('hospital'));
+      } else if (healthCategory === 'clinic') {
+        list = list.filter(f => (f.type || '').toLowerCase().includes('clinic'));
+      } else if (healthCategory === 'health_center') {
+        list = list.filter(f => (f.type || '').toLowerCase().includes('health_center') || (f.type || '').toLowerCase().includes('health center'));
+      } else if (healthCategory === 'pharmacy') {
+        list = list.filter(f => (f.type || '').toLowerCase().includes('pharmacy') || (f.type || '').toLowerCase().includes('chemist'));
+      } else if (healthCategory === 'emergency') {
+        list = list.filter(f => f.emergency === true || (typeof f.emergency === 'string' && ['yes', 'true'].includes((f.emergency as string).toLowerCase())));
+      }
+    }
+    if (healthSearch.trim()) {
+      const q = healthSearch.trim().toLowerCase();
+      list = list.filter(f =>
+        (f.name || '').toLowerCase().includes(q) ||
+        (f.address || '').toLowerCase().includes(q) ||
+        (f.type || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [facilities, healthCategory, healthSearch]);
+
+  const healthcareMapMarkers = useMemo<MapMarkerItem[]>(() => {
+    return filteredHealthcareFacilities
+      .filter(f => f.latitude != null && f.longitude != null && !isNaN(f.latitude) && !isNaN(f.longitude))
+      .map(f => ({
+        lat: f.latitude,
+        lon: f.longitude,
+        title: f.name,
+        category: f.type || 'hospital',
+        address: f.address || (f.city_name ? `${f.city_name}, ${f.country || ''}` : undefined),
+        distance_meters: f.distance_meters != null ? f.distance_meters : undefined,
+        provider: f.source_dataset ? `Kaggle: ${f.source_dataset}` : (f.provider || 'Kaggle Healthcare Dataset'),
+        website: f.website || undefined,
+        phone: f.phone || undefined,
+      }));
+  }, [filteredHealthcareFacilities]);
 
   // Update Relocation Destination (Guarded against loops)
   useEffect(() => {
@@ -480,52 +543,222 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
 
       {/* Tab 4: Healthcare */}
       {activeTab === 'healthcare' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
-              HEALTHCARE INFRASTRUCTURE ({facilities.length})
-            </h2>
-            <DataTrustBadge status={facilities.length > 0 ? "LIVE" : "DATA UNAVAILABLE"} size="sm" source="OpenStreetMap / Overpass" />
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#1E334A]/60">
+            <div>
+              <div className="flex items-center gap-2">
+                <HeartPulse className="w-5 h-5 text-rose-500" />
+                <h2 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
+                  HEALTHCARE INTELLIGENCE ({facilities.length > 0 ? `${facilities.length} INDEXED` : '0 INDEXED'})
+                </h2>
+              </div>
+              <p className="text-xs font-mono text-slate-400 mt-0.5">
+                Verified facility-level medical infrastructure mapped from Global Kaggle Healthcare registries
+              </p>
+            </div>
+            <DataTrustBadge
+              status={facilities.length > 0 ? "VERIFIED" : "DATA UNAVAILABLE"}
+              size="sm"
+              source={facilities.length > 0 ? "Kaggle Healthcare Registry" : "Kaggle Open Registry"}
+            />
           </div>
 
+          {/* Metric Summary Counters */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="p-4 rounded-2xl bg-[#0B1726] border border-[#1E334A] space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">TOTAL FACILITIES</span>
+              <div className="text-2xl font-extrabold font-mono text-white">{healthcareTotal}</div>
+              <div className="text-[10px] font-mono text-slate-500">Municipal Scope</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-[#0B1726] border border-[#1E334A] space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">HOSPITALS</span>
+              <div className="text-2xl font-extrabold font-mono text-rose-400">{hospitalCount}</div>
+              <div className="text-[10px] font-mono text-slate-500">Inpatient / Acute</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-[#0B1726] border border-[#1E334A] space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">CLINICS</span>
+              <div className="text-2xl font-extrabold font-mono text-emerald-400">{clinicCount}</div>
+              <div className="text-[10px] font-mono text-slate-500">Outpatient Care</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-[#0B1726] border border-[#1E334A] space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">HEALTH CENTERS</span>
+              <div className="text-2xl font-extrabold font-mono text-cyan-400">{healthCenterCount}</div>
+              <div className="text-[10px] font-mono text-slate-500">Primary / Civic</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-[#0B1726] border border-[#1E334A] space-y-1 col-span-2 sm:col-span-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">PHARMACIES & OTHER</span>
+              <div className="text-2xl font-extrabold font-mono text-amber-400">{pharmacyCount}</div>
+              <div className="text-[10px] font-mono text-slate-500">Dispensaries / Allied</div>
+            </div>
+          </div>
+
+          {/* Interactive Geospatial Leaflet Map */}
+          {city?.latitude != null && city?.longitude != null && (
+            <div className="rounded-2xl border border-[#1E334A] overflow-hidden bg-[#030712] space-y-0">
+              <div className="px-4 py-3 bg-[#07111F] border-b border-[#1E334A] flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Crosshair className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider">
+                    SPATIAL TOPOLOGY ({healthcareMapMarkers.length} SITES PLOTTED)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-slate-400">
+                    City Anchor: {city.name} ({city.latitude.toFixed(2)}°, {city.longitude.toFixed(2)}°)
+                  </span>
+                </div>
+              </div>
+              <InteractiveMap
+                latitude={city.latitude}
+                longitude={city.longitude}
+                cityName={city.name}
+                markers={healthcareMapMarkers}
+                zoom={12}
+                height="h-[360px]"
+                showFilters={false}
+              />
+            </div>
+          )}
+
+          {/* Filter Pills & Search Bar */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: 'all', label: `All (${facilities.length})` },
+                { id: 'hospital', label: `Hospitals (${hospitalCount})` },
+                { id: 'clinic', label: `Clinics (${clinicCount})` },
+                { id: 'health_center', label: `Health Centers (${healthCenterCount})` },
+                { id: 'pharmacy', label: `Pharmacies (${pharmacyCount})` },
+                ...(emergencyCount > 0 ? [{ id: 'emergency', label: `Emergency (${emergencyCount})` }] : []),
+              ].map((btn) => (
+                <button
+                  key={btn.id}
+                  onClick={() => setHealthCategory(btn.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                    healthCategory === btn.id
+                      ? 'bg-rose-500 text-white font-bold shadow-md shadow-rose-500/20'
+                      : 'bg-[#0B1726] border border-[#1E334A] text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative min-w-[220px]">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Filter facilities..."
+                value={healthSearch}
+                onChange={(e) => setHealthSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#0B1726] border border-[#1E334A] text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
+              />
+            </div>
+          </div>
+
+          {/* Content: Facility Cards or Empty State */}
           {facilities.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-[#0B1726] border border-amber-500/20 text-center space-y-3">
+            <div className="p-10 rounded-2xl bg-[#0B1726] border border-amber-500/20 text-center space-y-3">
               <div className="flex justify-center">
-                <DataTrustBadge status="DATA UNAVAILABLE" size="md" source="OpenStreetMap / Overpass" />
+                <DataTrustBadge status="DATA UNAVAILABLE" size="md" source="Kaggle Healthcare Registry" />
               </div>
               <h3 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
-                HEALTHCARE INFRASTRUCTURE DATA UNAVAILABLE
+                NO VERIFIED HEALTHCARE FACILITIES INDEXED FOR {city?.name?.toUpperCase() || 'THIS CITY'}
               </h3>
-              <p className="text-xs text-slate-300 font-mono max-w-lg mx-auto leading-relaxed">
-                Source: OpenStreetMap / Overpass
+              <p className="text-xs text-slate-300 font-mono max-w-xl mx-auto leading-relaxed">
+                UrbanLens anti-hallucination policy strictly prohibits displaying synthetic, guessed, or ungrounded medical facilities.
                 <br />
-                Reason: live provider unavailable (public mirrors offline or rate-limited).
-                <br />
-                UrbanLens anti-hallucination policy prevents rendering synthetic hospitals or ungrounded coordinates.
+                Global Kaggle healthcare coverage is currently active for cities across Australia, Brazil, Canada, Egypt, Germany, Ghana, India, Indonesia, Nigeria, Singapore, the United Kingdom, and the United States.
               </p>
+            </div>
+          ) : filteredHealthcareFacilities.length === 0 ? (
+            <div className="p-8 rounded-2xl bg-[#0B1726] border border-[#1E334A] text-center space-y-2">
+              <p className="text-xs font-mono text-slate-400">
+                No facilities match filter "{healthCategory}" {healthSearch ? `and query "${healthSearch}"` : ''}.
+              </p>
+              <button
+                onClick={() => { setHealthCategory('all'); setHealthSearch(''); }}
+                className="text-xs font-mono text-cyan-400 hover:underline"
+              >
+                Reset filters
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {facilities.map((fac) => (
-                <div key={fac.facility_id} className="p-5 rounded-2xl bg-[#0B1726] border border-[#1E334A] hover:border-cyan-500/40 transition-colors space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-bold font-mono text-white">{fac.name}</h4>
-                      <span className="text-[11px] font-mono text-emerald-400 uppercase">{fac.type || fac.amenity || 'Facility'}</span>
+              {filteredHealthcareFacilities.map((fac) => (
+                <div
+                  key={fac.facility_id || (fac as any).healthcare_id}
+                  className="p-5 rounded-2xl bg-[#0B1726] border border-[#1E334A] hover:border-cyan-500/40 transition-colors flex flex-col justify-between space-y-3"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold font-mono text-white leading-snug">
+                          {fac.name}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded uppercase ${
+                            (fac.type || '').toLowerCase().includes('hospital')
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                              : (fac.type || '').toLowerCase().includes('clinic')
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                              : (fac.type || '').toLowerCase().includes('health_center')
+                              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                          }`}>
+                            {fac.type || 'Facility'}
+                          </span>
+                          {(fac.emergency === true || fac.emergency === 'yes' || fac.emergency === 'true') && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-600/20 text-red-300 border border-red-500/30 uppercase">
+                              EMERGENCY
+                            </span>
+                          )}
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                            {fac.source_dataset ? `Kaggle: ${fac.source_dataset}` : 'Source: Kaggle'}
+                          </span>
+                        </div>
+                      </div>
+                      <HeartPulse className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                     </div>
-                    <HeartPulse className="w-4 h-4 text-rose-400" />
+
+                    {fac.address && (
+                      <div className="text-xs font-mono text-slate-400 flex items-start gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{fac.address}</span>
+                      </div>
+                    )}
                   </div>
-                  {fac.address && (
-                    <div className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-slate-500" />
-                      <span className="truncate">{fac.address}</span>
+
+                  <div className="pt-2 border-t border-[#1E334A]/50 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                    <div>
+                      {fac.distance_meters != null && (
+                        <span>
+                          {(fac.distance_meters / 1000).toFixed(1)} km from urban core
+                        </span>
+                      )}
                     </div>
-                  )}
-                  {fac.distance_meters && (
-                    <div className="text-[10px] font-mono text-slate-400">
-                      DISTANCE: {(fac.distance_meters / 1000).toFixed(1)} km from urban core
+                    <div className="flex items-center gap-3">
+                      {fac.phone && (
+                        <span className="flex items-center gap-1 text-slate-300">
+                          <Phone className="w-3 h-3 text-slate-500" />
+                          {fac.phone}
+                        </span>
+                      )}
+                      {fac.website && (
+                        <a
+                          href={fac.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                        >
+                          <span>Portal</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>

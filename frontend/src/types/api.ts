@@ -441,8 +441,11 @@ export interface CityEducationResponse {
 
 export interface HealthcareFacilityItem {
   facility_id: string;
+  healthcare_id?: string;
   name: string;
+  name_original?: string | null;
   type: string;
+  facility_type?: string | null;
   amenity?: string | null;
   address?: string | null;
   latitude: number;
@@ -450,23 +453,40 @@ export interface HealthcareFacilityItem {
   distance_meters?: number | null;
   phone?: string | null;
   website?: string | null;
-  has_verified_website: boolean;
+  has_verified_website?: boolean;
   opening_hours?: string | null;
-  emergency?: boolean | null;
-  source: string;
-  provider: string;
-  status: string;
+  emergency?: boolean | string | null;
+  source?: string;
+  source_dataset?: string | null;
+  source_url?: string | null;
+  provider?: string;
+  status?: string;
   verified_at?: string | null;
+  city_id?: string | null;
+  city_name?: string | null;
+  country?: string | null;
+  city_match_method?: string | null;
+  city_match_distance_km?: number | null;
+  city_match_confidence?: number | null;
+  specialties?: string[];
+  services?: string[];
+  data_quality?: Record<string, any> | null;
 }
 
 export interface CityHealthcareResponse {
   city_id: string;
   city_name: string;
   total: number;
+  page?: number;
+  page_size?: number;
+  items?: HealthcareFacilityItem[];
   facilities: HealthcareFacilityItem[];
-  available_types: string[];
-  disclaimer: string;
-  meta: Record<string, any>;
+  available_types?: string[];
+  source?: string;
+  timestamp?: string | null;
+  provenance?: Record<string, any>;
+  disclaimer?: string;
+  meta?: Record<string, any>;
 }
 
 export interface RouteResponse {

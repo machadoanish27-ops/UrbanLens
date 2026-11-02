@@ -1,0 +1,24 @@
+{
+  "summary": {
+    "baseline_clean_records": 193435,
+    "newly_added_clean_records": 52105,
+    "total_merged_clean_records": 245540,
+    "distinct_canonical_cities_mapped": 11343,
+    "distinct_countries_count": 12,
+    "orphan_canonical_city_references": 0
+  },
+  "country_counts": {
+    "Australia": 985,
+    "Brazil": 1502,
+    "Canada": 5571,
+    "Egypt": 9,
+    "Germany": 8435,
+    "Ghana": 3132,
+    "India": 177796,
+    "Indonesia": 19120,
+    "Nigeria": 21638,
+    "Singapore": 416,
+    "United Kingdom": 791,
+    "United States": 6145
+  }
+}

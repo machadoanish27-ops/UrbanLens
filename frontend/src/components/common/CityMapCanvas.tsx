@@ -71,7 +71,7 @@ export const CityMapCanvas: React.FC<CityMapCanvasProps> = ({
           category: p.category || activeCategory,
           address: p.address,
           distance_meters: p.distance_meters,
-          provider: 'OpenStreetMap Overpass',
+          provider: p.source || p.provider || 'OpenStreetMap Overpass',
           website: p.tags?.website,
           phone: p.tags?.phone,
         }))
