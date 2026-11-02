@@ -1,3 +1,4 @@
+import { sanitizeExternalUrl } from '../utils/url';
 import React from 'react';
 import { FileText, ExternalLink, Tag } from 'lucide-react';
 import type { EvidenceUsedItem, KnowledgeEvidenceItem } from '../types/api';
@@ -26,9 +27,9 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, className 
           </h4>
         </div>
 
-        {evidence.source_url && (
+        {evidence.source_url && sanitizeExternalUrl(evidence.source_url) && (
           <a
-            href={evidence.source_url}
+            href={sanitizeExternalUrl(evidence.source_url)!}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1 shrink-0 px-2 py-0.5 rounded bg-indigo-950/40 border border-indigo-800/40"

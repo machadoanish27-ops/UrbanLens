@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo, type FC } from 'react';
 import L from 'leaflet';
 import { MapPin, Navigation, Filter } from 'lucide-react';
+import { sanitizeExternalUrl } from '../utils/url';
 
 export interface MapMarkerItem {
   lat: number;
@@ -258,7 +259,10 @@ export const InteractiveMap: FC<InteractiveMapProps> = ({
           ${m.address ? `<div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;">${m.address}</div>` : ''}
           ${m.distance_meters !== undefined ? `<div style="color: #38bdf8; font-size: 10px; font-weight: 600; margin-bottom: 4px;">${m.distance_meters > 1000 ? `${(m.distance_meters / 1000).toFixed(1)} km from center` : `${Math.round(m.distance_meters)}m from center`}</div>` : ''}
           ${m.provider ? `<div style="color: #64748b; font-size: 10px; margin-bottom: 4px;">Source: ${m.provider}</div>` : ''}
-          ${m.website ? `<div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1);"><a href="${m.website}" target="_blank" rel="noopener noreferrer" style="color: #818cf8; text-decoration: none; font-weight: 600; font-size: 11px;">Official Website &rarr;</a></div>` : ''}
+          ${(() => {
+            const safe = sanitizeExternalUrl(m.website);
+            return safe ? `<div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1);"><a href="${safe}" target="_blank" rel="noopener noreferrer" style="color: #818cf8; text-decoration: none; font-weight: 600; font-size: 11px;">Official Website &rarr;</a></div>` : '';
+          })()}
         </div>
       `;
 

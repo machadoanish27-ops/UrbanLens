@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUrban } from '../context/UrbanContext';
+import { useCityCost } from '../hooks/useUrbanLens';
 import { CITIES_DATA } from '../data/urbanData';
 import { Scale, Users, Wind, Thermometer, Car, Coins, TrendingUp } from 'lucide-react';
 import { DataTrustBadge } from '../components/common/DataTrustBadge';
@@ -14,6 +15,13 @@ export const CompareCitiesPage: React.FC = () => {
     ? fallbackKey
     : (CITIES_DATA[rawCityBKey] ? rawCityBKey : fallbackKey);
   const cityB = CITIES_DATA[effectiveCityBKey] || CITIES_DATA[fallbackKey];
+
+  // Fetch dynamic canonical cost for cityB
+  const { data: cityBCostResp } = useCityCost(cityB.id || effectiveCityBKey);
+  const cityBCostMetric = cityBCostResp?.data?.metrics?.find(m =>
+    m.metric?.toLowerCase().includes('cost of living index')
+  )?.value;
+  const effectiveCostB = typeof cityBCostMetric === 'number' ? cityBCostMetric : (cityB.costOfLivingIndex ?? null);
 
   const metrics = [
     {
@@ -69,10 +77,10 @@ export const CompareCitiesPage: React.FC = () => {
     {
       label: 'Cost of Living Index',
       icon: Coins,
-      valA: cityA.costOfLivingIndex ? `${cityA.costOfLivingIndex}` : 'UNAVAILABLE',
-      valB: cityB.costOfLivingIndex ? `${cityB.costOfLivingIndex}` : 'UNAVAILABLE',
+      valA: cityA.costOfLivingIndex !== null && cityA.costOfLivingIndex !== undefined ? `${cityA.costOfLivingIndex}` : 'UNAVAILABLE',
+      valB: effectiveCostB !== null && effectiveCostB !== undefined ? `${effectiveCostB}` : 'UNAVAILABLE',
       rawA: cityA.costOfLivingIndex || 0,
-      rawB: cityB.costOfLivingIndex || 0,
+      rawB: effectiveCostB || 0,
       unit: 'NYC=100',
       lowerIsBetter: true,
     },

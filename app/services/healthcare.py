@@ -231,8 +231,8 @@ class HealthcareService:
         # Available types
         available_types = sorted(list(set(it.type for it in items if it.type)))
 
-        # 2. Live OSM Provider query (Phase 15: live enrichment)
-        if city_lat is not None and city_lon is not None:
+        # 2. Live OSM Provider query (Phase 15: live enrichment when canonical dataset has fewer items than requested limit)
+        if len(items) < effective_limit and city_lat is not None and city_lon is not None:
             categories_to_query = ["hospital", "clinic", "pharmacy", "dentist"]
             if category and category.strip().lower() in ("hospital", "clinic", "dentist", "pharmacy"):
                 categories_to_query = [category.strip().lower()]

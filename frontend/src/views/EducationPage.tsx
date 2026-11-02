@@ -18,6 +18,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { DataTrustBadge } from '../components/common/DataTrustBadge';
+import { sanitizeExternalUrl, getDisplayDomain } from '../utils/url';
 
 export const EducationPage: React.FC = () => {
   const { currentCity, activeCityId } = useUrban();
@@ -226,21 +227,25 @@ export const EducationPage: React.FC = () => {
                     {inst.source || 'Canonical Registry'}
                   </span>
 
-                  {inst.website ? (
-                    <a
-                      href={inst.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 text-[11px] font-mono font-medium transition-all"
-                    >
-                      <span>Website</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    <span className="text-[10px] font-mono text-slate-400 italic">
-                      Indexed
-                    </span>
-                  )}
+                  {(() => {
+                    const safeUrl = sanitizeExternalUrl(inst.website);
+                    const domain = getDisplayDomain(inst.website);
+                    return safeUrl ? (
+                      <a
+                        href={safeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 text-[11px] font-mono font-medium transition-all"
+                      >
+                        <span className="truncate max-w-[110px]">{domain || 'Website'}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="text-[10px] font-mono text-slate-400 italic">
+                        Canonical Registry
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             ))}

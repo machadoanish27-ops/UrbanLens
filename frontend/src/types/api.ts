@@ -164,7 +164,12 @@ export interface CostMetricItem {
 
 export interface CostOfLivingResponse {
   city_id: string;
+  is_available?: boolean;
+  status?: string;
+  metric_count?: number;
   metrics: CostMetricItem[];
+  source?: string | null;
+  warning?: string | null;
   summary?: {
     consumer_price_index?: number | null;
     rent_index?: number | null;

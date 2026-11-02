@@ -17,6 +17,7 @@ import {
 import { CityMapCanvas } from '../components/common/CityMapCanvas';
 import { DataTrustBadge } from '../components/common/DataTrustBadge';
 import { InteractiveMap, type MapMarkerItem } from '../components/InteractiveMap';
+import { sanitizeExternalUrl, getDisplayDomain } from '../utils/url';
 import {
   Users,
   Wind,
@@ -78,7 +79,7 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
   const { data: aqiResp } = useCityAirQualityLive(cityId);
   const { data: costResp } = useCityCost(cityId);
   const { data: eduResp } = useCityEducation(cityId);
-  const { data: healthResp } = useCityHealthcare(cityId);
+  const { data: healthResp, isLoading: isHealthLoading } = useCityHealthcare(cityId);
   const { data: intelResp } = useCityIntelligence(cityId);
 
   // Synchronous fallback from canonical seed cities or currentCity
@@ -517,16 +518,19 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
                       <h4 className="text-sm font-bold font-mono text-white">{inst.name}</h4>
                       <span className="text-[11px] font-mono text-purple-300">{inst.type}</span>
                     </div>
-                    {inst.website && (
-                      <a
-                        href={inst.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-400 hover:text-cyan-300 p-1"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    )}
+                    {(() => {
+                      const safeUrl = sanitizeExternalUrl(inst.website);
+                      return safeUrl ? (
+                        <a
+                          href={safeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400 hover:text-cyan-300 p-1"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      ) : null;
+                    })()}
                   </div>
                   {inst.address && (
                     <div className="text-xs font-mono text-slate-400 flex items-center gap-1">
@@ -550,7 +554,7 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
               <div className="flex items-center gap-2">
                 <HeartPulse className="w-5 h-5 text-rose-500" />
                 <h2 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
-                  HEALTHCARE INTELLIGENCE ({facilities.length > 0 ? `${facilities.length} INDEXED` : '0 INDEXED'})
+                  HEALTHCARE INTELLIGENCE ({isHealthLoading ? 'SYNCING...' : `${healthcareTotal} INDEXED`})
                 </h2>
               </div>
               <p className="text-xs font-mono text-slate-400 mt-0.5">
@@ -558,7 +562,7 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
               </p>
             </div>
             <DataTrustBadge
-              status={facilities.length > 0 ? "VERIFIED" : "DATA UNAVAILABLE"}
+              status={isHealthLoading ? "SYNCING" : (facilities.length > 0 ? "VERIFIED" : "DATA UNAVAILABLE")}
               size="sm"
               source={facilities.length > 0 ? "Kaggle Healthcare Registry" : "Kaggle Open Registry"}
             />
@@ -658,8 +662,15 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
             </div>
           </div>
 
-          {/* Content: Facility Cards or Empty State */}
-          {facilities.length === 0 ? (
+          {/* Content: Facility Cards, Loading State, or Empty State */}
+          {isHealthLoading ? (
+            <div className="p-12 rounded-2xl bg-[#0B1726] border border-[#1E334A] text-center space-y-3">
+              <div className="w-8 h-8 border-2 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin mx-auto" />
+              <div className="text-xs font-mono text-cyan-400 font-semibold uppercase tracking-wider">
+                SYNCHRONIZING VERIFIED HEALTHCARE DIRECTORY...
+              </div>
+            </div>
+          ) : facilities.length === 0 ? (
             <div className="p-10 rounded-2xl bg-[#0B1726] border border-amber-500/20 text-center space-y-3">
               <div className="flex justify-center">
                 <DataTrustBadge status="DATA UNAVAILABLE" size="md" source="Kaggle Healthcare Registry" />
@@ -670,7 +681,7 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
               <p className="text-xs text-slate-300 font-mono max-w-xl mx-auto leading-relaxed">
                 UrbanLens anti-hallucination policy strictly prohibits displaying synthetic, guessed, or ungrounded medical facilities.
                 <br />
-                Global Kaggle healthcare coverage is currently active for cities across Australia, Brazil, Canada, Egypt, Germany, Ghana, India, Indonesia, Nigeria, Singapore, the United Kingdom, and the United States.
+                Global healthcare coverage is currently active for cities across Australia, Brazil, Canada, Egypt, Germany, Ghana, India, Indonesia, Japan, Nigeria, Singapore, the United Arab Emirates, the United Kingdom, and the United States.
               </p>
             </div>
           ) : filteredHealthcareFacilities.length === 0 ? (
@@ -723,40 +734,55 @@ export const CityDetailPage: React.FC<CityDetailPageProps> = ({ initialTab = 'ov
                       <HeartPulse className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                     </div>
 
-                    {fac.address && (
+                    {fac.address ? (
                       <div className="text-xs font-mono text-slate-400 flex items-start gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
                         <span className="line-clamp-2">{fac.address}</span>
                       </div>
+                    ) : (
+                      <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-600 shrink-0 opacity-60" />
+                        <span className="italic">Address: Registered at Municipal Coordinates</span>
+                      </div>
                     )}
                   </div>
 
-                  <div className="pt-2 border-t border-[#1E334A]/50 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                  <div className="pt-2 border-t border-[#1E334A]/50 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                     <div>
-                      {fac.distance_meters != null && (
+                      {fac.distance_meters != null ? (
                         <span>
                           {(fac.distance_meters / 1000).toFixed(1)} km from urban core
                         </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500">Core Scope</span>
                       )}
                     </div>
                     <div className="flex items-center gap-3">
-                      {fac.phone && (
+                      {fac.phone ? (
                         <span className="flex items-center gap-1 text-slate-300">
-                          <Phone className="w-3 h-3 text-slate-500" />
-                          {fac.phone}
+                          <Phone className="w-3 h-3 text-emerald-400" />
+                          <span>{fac.phone}</span>
                         </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 italic">Unlisted Phone</span>
                       )}
-                      {fac.website && (
-                        <a
-                          href={fac.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-                        >
-                          <span>Portal</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
+                      {(() => {
+                        const safeUrl = sanitizeExternalUrl(fac.website);
+                        return safeUrl ? (
+                          <a
+                            href={safeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 underline underline-offset-2 transition-colors"
+                            title={`Open ${getDisplayDomain(safeUrl)}`}
+                          >
+                            <span>{getDisplayDomain(safeUrl)}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 italic">No Portal</span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

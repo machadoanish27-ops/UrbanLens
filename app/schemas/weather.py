@@ -1,7 +1,8 @@
 """Weather and forecast schemas."""
 
+from datetime import datetime
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class WeatherObservationItem(BaseModel):
@@ -19,6 +20,13 @@ class WeatherObservationItem(BaseModel):
     uv_index: float | None = None
     source_row: int | None = None
 
+    @field_validator("observed_at", mode="before")
+    @classmethod
+    def serialize_observed_at(cls, v: Any) -> str | None:
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return str(v) if v is not None else None
+
 
 class WeatherForecastItem(BaseModel):
     """WMO official weather forecast entry."""
@@ -33,6 +41,18 @@ class WeatherForecastItem(BaseModel):
     description: str | None = None
     timezone: str | None = None
     source_city_id: str | None = None
+
+    @field_validator("forecast_for", "fetched_at", mode="before")
+    @classmethod
+    def serialize_datetime(cls, v: Any) -> str | None:
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return str(v) if v is not None else None
+
+    @field_validator("timezone", mode="before")
+    @classmethod
+    def serialize_timezone(cls, v: Any) -> str | None:
+        return str(v) if v is not None else None
 
 
 class CityWeatherResponse(BaseModel):
@@ -60,4 +80,3 @@ class LiveCityWeatherResponse(BaseModel):
     longitude: float
     weather: dict[str, Any] | None = None
     meta: dict[str, Any]
-

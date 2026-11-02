@@ -37,6 +37,7 @@ import {
 } from '../hooks/useUrbanLens';
 import { useOriginDestination } from '../context/OriginDestinationContext';
 import { StatusBadge } from '../components/StatusBadge';
+import { sanitizeExternalUrl, getDisplayDomain } from '../utils/url';
 import { ProvenanceTag } from '../components/ProvenanceTag';
 import { MetricCard } from '../components/MetricCard';
 import { EvidenceCard } from '../components/EvidenceCard';
@@ -1189,19 +1190,23 @@ export const CityPage: React.FC = () => {
                       </div>
 
                       {/* Official Website or Unavailable */}
-                      {inst.website ? (
-                        <a
-                          href={inst.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white text-xs font-semibold inline-flex items-center gap-1 transition-all shrink-0"
-                        >
-                          <span>Official Website</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      ) : (
-                        <span className="text-[11px] text-slate-500 italic shrink-0">Website unavailable</span>
-                      )}
+                      {(() => {
+                        const safeUrl = sanitizeExternalUrl(inst.website);
+                        const domain = getDisplayDomain(inst.website);
+                        return safeUrl ? (
+                          <a
+                            href={safeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white text-xs font-semibold inline-flex items-center gap-1 transition-all shrink-0"
+                          >
+                            <span>{domain || 'Official Website'}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-slate-500 italic shrink-0">Website unavailable</span>
+                        );
+                      })()}
                     </div>
 
                     {inst.address && (
@@ -1336,19 +1341,23 @@ export const CityPage: React.FC = () => {
                           : `${Math.round(fac.distance_meters)}m away`
                         : 'Proximity mapped'}
                     </span>
-                    {fac.website ? (
-                      <a
-                        href={fac.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-1"
-                      >
-                        <span>Website</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    ) : (
-                      <span className="text-slate-600">No website</span>
-                    )}
+                    {(() => {
+                      const safeUrl = sanitizeExternalUrl(fac.website);
+                      const domain = getDisplayDomain(fac.website);
+                      return safeUrl ? (
+                        <a
+                          href={safeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-1"
+                        >
+                          <span>{domain || 'Website'}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : (
+                        <span className="text-slate-600">No website</span>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}

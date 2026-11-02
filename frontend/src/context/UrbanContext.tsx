@@ -279,7 +279,6 @@ export const UrbanProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const canonical = cityResp?.data;
     const weather = weatherResp?.data?.weather?.current;
     const aqiData = aqiResp?.data?.air_quality;
-    const costSummary = costResp?.data?.summary;
     const unis = uniResp?.data || [];
 
     const key = getStudioKeyForId(activeCityId);
@@ -342,7 +341,27 @@ export const UrbanProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       : rawAqi <= 200 ? 'Unhealthy'
       : 'Very Unhealthy';
 
-    const costOfLivingIndex = costSummary?.consumer_price_index ?? fallbackBase.costOfLivingIndex;
+    // Parse dynamic cost of living & housing metrics from canonical database
+    const metricsList = costResp?.data?.metrics || [];
+    const metricMap = new Map<string, number>();
+    for (const m of metricsList) {
+      if (m.metric && typeof m.value === 'number') {
+        metricMap.set(m.metric.toLowerCase().trim(), m.value);
+      }
+    }
+    const hasCostData = costResp?.data?.is_available === true && metricsList.length > 0;
+
+    const costOfLivingIndex = hasCostData
+      ? (metricMap.get('cost of living index') ?? null)
+      : null;
+    const housingIndex = hasCostData
+      ? (metricMap.get('rent index') ?? metricMap.get('cost of living plus rent index') ?? null)
+      : null;
+    const foodIndex = hasCostData
+      ? (metricMap.get('restaurant price index') ?? metricMap.get('groceries index') ?? null)
+      : null;
+    const transportIndex = hasCostData ? fallbackBase.transportIndex : null;
+    const utilitiesIndex = hasCostData ? fallbackBase.utilitiesIndex : null;
 
     const universities = unis.length > 0
       ? unis.map((u, i) => ({
@@ -383,6 +402,10 @@ export const UrbanProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       no2,
       o3,
       costOfLivingIndex,
+      housingIndex,
+      foodIndex,
+      transportIndex,
+      utilitiesIndex,
       universities,
     };
   }, [activeCityId, cityResp, weatherResp, aqiResp, costResp, uniResp, isCityLoading]);

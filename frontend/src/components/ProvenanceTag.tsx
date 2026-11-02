@@ -1,3 +1,4 @@
+import { sanitizeExternalUrl } from '../utils/url';
 import React from 'react';
 import { ShieldCheck, Calendar, ExternalLink } from 'lucide-react';
 
@@ -24,9 +25,9 @@ export const ProvenanceTag: React.FC<ProvenanceTagProps> = ({
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
           <ShieldCheck className="w-3 h-3 text-indigo-400" />
           <span>Source: <strong className="font-medium text-slate-200">{source}</strong></span>
-          {sourceUrl && (
+          {sourceUrl && sanitizeExternalUrl(sourceUrl) && (
             <a
-              href={sourceUrl}
+              href={sanitizeExternalUrl(sourceUrl)!}
               target="_blank"
               rel="noopener noreferrer"
               className="ml-1 text-indigo-400 hover:text-indigo-300"
